@@ -197,7 +197,7 @@ public class QuarkusTestExtension
                                     out.write(cw.toByteArray());
                                 }
                                 shutdownTasks.add(new DeleteRunnable(location));
-                            } catch (IOException ex) {
+                            } catch (Throwable ex) {
                                 ex.printStackTrace();
                             }
                         }

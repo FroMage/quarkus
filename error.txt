@@ -1,0 +1,64 @@
+Caused by: java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+  Location:
+    io/quarkus/example/panache/TestEndpoint.await(Ljava/util/concurrent/CompletionStage;)Ljava/lang/Object; @130: athrow
+  Reason:
+    Type 'java/lang/Object' (current frame, stack[0]) is not assignable to 'java/lang/Throwable'
+  Current Frame:
+    bci: @130
+    flags: { }
+    locals: { 'java/util/concurrent/CompletionStage', top, 'com/github/fromage/quasi/fibers/Stack', top, null }
+    stack: { 'java/lang/Object' }
+  Bytecode:
+    0x0000000: 013a 04b8 0395 594d c600 252c 043e b603
+    0x0000010: 98aa 0000 0000 0013 0000 0001 0000 0001
+    0x0000020: 0000 003d 2cb6 039b 9a00 0501 4d03 3ebb
+    0x0000030: 00fb 592a b700 fc2c c600 272c 0405 b603
+    0x0000040: 9e2c 03b8 03a2 2a2c 04b8 03a2 033e 2c04
+    0x0000050: b603 a5c0 03a7 4b2c 03b6 03a5 c000 fbb6
+    0x0000060: 00fd 2cc6 0008 2c05 b603 aab0 4c2b bf4c
+    0x0000070: bb01 a359 2bb7 0100 bf2c c600 082c 05b6
+    0x0000080: 03aa bf                                
+  Exception Handler Table:
+    bci [45, 121] => handler: 130
+    bci [45, 121] => handler: 130
+    bci [47, 59] => handler: 108
+    bci [95, 98] => handler: 108
+    bci [47, 59] => handler: 111
+    bci [95, 98] => handler: 111
+    bci [45, 121] => handler: 121
+  Stackmap Table:
+    full_frame(@36,{Object[#935],Top,Object[#913],Integer,Null},{})
+    full_frame(@45,{Object[#935],Top,Object[#913],Top,Null},{})
+    full_frame(@78,{Object[#935],Top,Object[#913],Integer,Null},{})
+    same_locals_1_stack_item_frame(@95,Object[#251])
+    same_locals_1_stack_item_frame(@107,Object[#22])
+    same_locals_1_stack_item_frame(@108,Object[#419])
+    same_locals_1_stack_item_frame(@111,Object[#420])
+    full_frame(@121,{Object[#935],Top,Object[#913],Top,Null},{Object[#420]})
+    same_locals_1_stack_item_frame(@130,Object[#22])
+
+	at java.lang.Class.getDeclaredMethods0(Native Method)
+	at java.lang.Class.privateGetDeclaredMethods(Class.java:2701)
+	at java.lang.Class.privateGetPublicMethods(Class.java:2902)
+	at java.lang.Class.getMethods(Class.java:1615)
+	at org.jboss.resteasy.spi.metadata.ResourceBuilder.fromAnnotations(ResourceBuilder.java:892)
+	at org.jboss.resteasy.spi.metadata.ResourceBuilder.getRootResourceFromAnnotations(ResourceBuilder.java:858)
+	at org.jboss.resteasy.plugins.server.resourcefactory.POJOResourceFactory.<init>(POJOResourceFactory.java:40)
+	at org.jboss.resteasy.core.ResourceMethodRegistry.addPerRequestResource(ResourceMethodRegistry.java:84)
+	at org.jboss.resteasy.core.ResteasyDeploymentImpl.registration(ResteasyDeploymentImpl.java:467)
+	at org.jboss.resteasy.core.ResteasyDeploymentImpl.startInternal(ResteasyDeploymentImpl.java:283)
+	at org.jboss.resteasy.core.ResteasyDeploymentImpl.start(ResteasyDeploymentImpl.java:86)
+	at org.jboss.resteasy.plugins.server.servlet.ServletContainerDispatcher.init(ServletContainerDispatcher.java:122)
+	at org.jboss.resteasy.plugins.server.servlet.FilterDispatcher.init(FilterDispatcher.java:42)
+	at io.undertow.servlet.core.LifecyleInterceptorInvocation.proceed(LifecyleInterceptorInvocation.java:111)
+	at io.undertow.servlet.core.ManagedFilter.createFilter(ManagedFilter.java:80)
+	at io.undertow.servlet.core.DeploymentManagerImpl$2.call(DeploymentManagerImpl.java:589)
+	at io.undertow.servlet.core.DeploymentManagerImpl$2.call(DeploymentManagerImpl.java:554)
+	at io.undertow.servlet.core.ServletRequestContextThreadSetupAction$1.call(ServletRequestContextThreadSetupAction.java:42)
+	at io.undertow.servlet.core.ContextClassLoaderSetupAction$1.call(ContextClassLoaderSetupAction.java:43)
+	at io.quarkus.undertow.runtime.UndertowDeploymentTemplate$7$1$1.call(UndertowDeploymentTemplate.java:415)
+	at io.undertow.servlet.core.DeploymentManagerImpl.start(DeploymentManagerImpl.java:596)
+	at io.quarkus.undertow.runtime.UndertowDeploymentTemplate.bootServletContainer(UndertowDeploymentTemplate.java:384)
+	at io.quarkus.deployment.steps.UndertowBuildStep$build13.deploy(Unknown Source)
+	... 36 more

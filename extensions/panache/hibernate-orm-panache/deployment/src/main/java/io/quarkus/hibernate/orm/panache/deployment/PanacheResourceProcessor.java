@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 
 import javax.persistence.EntityManager;
 
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
@@ -44,6 +45,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+import io.quarkus.hibernate.orm.panache.Quasi;
 
 /**
  *
@@ -54,6 +56,7 @@ public final class PanacheResourceProcessor {
     private static final DotName DOTNAME_PANACHE_REPOSITORY = DotName.createSimple(PanacheRepository.class.getName());
     private static final DotName DOTNAME_PANACHE_ENTITY_BASE = DotName.createSimple(PanacheEntityBase.class.getName());
     private static final DotName DOTNAME_PANACHE_ENTITY = DotName.createSimple(PanacheEntity.class.getName());
+    private static final DotName DOTNAME_QUASI = DotName.createSimple(Quasi.class.getName());
 
     private static final Set<DotName> UNREMOVABLE_BEANS = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList(
@@ -90,6 +93,16 @@ public final class PanacheResourceProcessor {
             ApplicationIndexBuildItem applicationIndex,
             BuildProducer<BytecodeTransformerBuildItem> transformers,
             HibernateEnhancersRegisteredBuildItem hibernateMarker) throws Exception {
+
+        QuasiEnhancer quasiEnhancer = new QuasiEnhancer();
+        Set<String> quasiClasses = new HashSet<>();
+        for (AnnotationInstance annotationInstance : index.getIndex().getAnnotations(DOTNAME_QUASI)) {
+            String quasiUserClassName = annotationInstance.target().asMethod().declaringClass().name().toString();
+            quasiClasses.add(quasiUserClassName);
+        }
+        for (String quasiClass : quasiClasses) {
+            transformers.produce(new BytecodeTransformerBuildItem(quasiClass, quasiEnhancer));
+        }
 
         PanacheJpaRepositoryEnhancer daoEnhancer = new PanacheJpaRepositoryEnhancer();
         Set<String> daoClasses = new HashSet<>();
