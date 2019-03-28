@@ -36,8 +36,8 @@ public class RxDog extends PanacheRxEntityBase<RxDog> {
     @Override
     public void _setId(Object id) {
         // FIXME:
-        if(id instanceof Long)
-            this.id = ((Long)id).intValue();
+        if (id instanceof Long)
+            this.id = ((Long) id).intValue();
         else
             this.id = (Integer) id;
     }

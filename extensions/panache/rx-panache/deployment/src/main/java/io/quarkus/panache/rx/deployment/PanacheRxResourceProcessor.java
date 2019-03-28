@@ -61,7 +61,6 @@ public final class PanacheRxResourceProcessor {
             new HashSet<>(Arrays.asList(
                     DotName.createSimple(PgPoolProducer.class.getName()),
                     DotName.createSimple(PgPool.class.getName()))));
-    
 
     @BuildStep
     AdditionalBeanBuildItem producePgPool() {
@@ -99,13 +98,13 @@ public final class PanacheRxResourceProcessor {
             if (classInfo.name().equals(DOTNAME_PANACHE_RX_REPOSITORY))
                 continue;
             // skip ArC proxies
-            if(isArCProxy(classInfo))
+            if (isArCProxy(classInfo))
                 continue;
             rxRepositoryClasses.add(classInfo.name().toString());
         }
         for (ClassInfo classInfo : index.getIndex().getAllKnownImplementors(DOTNAME_PANACHE_RX_REPOSITORY)) {
             // skip ArC proxies
-            if(isArCProxy(classInfo))
+            if (isArCProxy(classInfo))
                 continue;
             rxRepositoryClasses.add(classInfo.name().toString());
         }
@@ -131,7 +130,7 @@ public final class PanacheRxResourceProcessor {
         // even though we don't augment it, we need to collect its id field
         ClassInfo panacheRxEntity = index.getIndex().getClassByName(DOTNAME_PANACHE_RX_ENTITY);
         rxModelEnhancer.collectFields(panacheRxEntity);
-        
+
         for (String rxModelClass : rxModelClasses) {
             transformers.produce(new BytecodeTransformerBuildItem(rxModelClass, rxModelEnhancer));
             PanacheRxModelInfoGenerator.generateModelClass(rxModelClass, rxModelEnhancer.entities, generatedClasses);

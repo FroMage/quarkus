@@ -71,12 +71,13 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
         private boolean defaultConstructorPresent;
         // set of name + "/" + descriptor (only for suspected accessor names)
         private Set<String> methods = new HashSet<>();
-        private Map<String,EntityField> fields;
+        private Map<String, EntityField> fields;
         private Map<String, EntityModel> entities;
         private String thisBinaryName;
         private String superName;
 
-        public ModelEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor, Map<String, EntityModel> entities) {
+        public ModelEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor,
+                Map<String, EntityModel> entities) {
             super(Opcodes.ASM6, outputClassVisitor);
             thisName = className;
             thisBinaryName = className.replace('.', '/');
@@ -90,9 +91,10 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             super.visit(version, access, name, signature, superName, interfaces);
             this.superName = superName;
         }
-        
+
         @Override
-        public MethodVisitor visitMethod(int access, String methodName, String descriptor, String signature, String[] exceptions) {
+        public MethodVisitor visitMethod(int access, String methodName, String descriptor, String signature,
+                String[] exceptions) {
             if ("<init>".equals(methodName) && "()V".equals(descriptor))
                 defaultConstructorPresent = true;
             if (methodName.startsWith("get")
@@ -283,31 +285,31 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
                 String getterDescriptor = "()" + field.typeDescriptor;
                 if (!methods.contains(getterName + "/" + getterDescriptor)) {
                     MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                                                         getterName, getterDescriptor, null, null);
+                            getterName, getterDescriptor, null, null);
                     mv.visitCode();
                     mv.visitIntInsn(Opcodes.ALOAD, 0);
                     mv.visitFieldInsn(Opcodes.GETFIELD, thisBinaryName, field.name, field.typeDescriptor);
                     int returnCode;
                     switch (field.typeDescriptor) {
-                    case "Z":
-                    case "B":
-                    case "C":
-                    case "S":
-                    case "I":
-                        returnCode = Opcodes.IRETURN;
-                        break;
-                    case "J":
-                        returnCode = Opcodes.LRETURN;
-                        break;
-                    case "F":
-                        returnCode = Opcodes.FRETURN;
-                        break;
-                    case "D":
-                        returnCode = Opcodes.DRETURN;
-                        break;
-                    default:
-                        returnCode = Opcodes.ARETURN;
-                        break;
+                        case "Z":
+                        case "B":
+                        case "C":
+                        case "S":
+                        case "I":
+                            returnCode = Opcodes.IRETURN;
+                            break;
+                        case "J":
+                            returnCode = Opcodes.LRETURN;
+                            break;
+                        case "F":
+                            returnCode = Opcodes.FRETURN;
+                            break;
+                        case "D":
+                            returnCode = Opcodes.DRETURN;
+                            break;
+                        default:
+                            returnCode = Opcodes.ARETURN;
+                            break;
                     }
                     mv.visitInsn(returnCode);
                     mv.visitMaxs(0, 0);
@@ -319,30 +321,30 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
                 String setterDescriptor = "(" + field.typeDescriptor + ")V";
                 if (!methods.contains(setterName + "/" + setterDescriptor)) {
                     MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                                                         setterName, setterDescriptor, null, null);
+                            setterName, setterDescriptor, null, null);
                     mv.visitCode();
                     mv.visitIntInsn(Opcodes.ALOAD, 0);
                     int loadCode;
                     switch (field.typeDescriptor) {
-                    case "Z":
-                    case "B":
-                    case "C":
-                    case "S":
-                    case "I":
-                        loadCode = Opcodes.ILOAD;
-                        break;
-                    case "J":
-                        loadCode = Opcodes.LLOAD;
-                        break;
-                    case "F":
-                        loadCode = Opcodes.FLOAD;
-                        break;
-                    case "D":
-                        loadCode = Opcodes.DLOAD;
-                        break;
-                    default:
-                        loadCode = Opcodes.ALOAD;
-                        break;
+                        case "Z":
+                        case "B":
+                        case "C":
+                        case "S":
+                        case "I":
+                            loadCode = Opcodes.ILOAD;
+                            break;
+                        case "J":
+                            loadCode = Opcodes.LLOAD;
+                            break;
+                        case "F":
+                            loadCode = Opcodes.FLOAD;
+                            break;
+                        case "D":
+                            loadCode = Opcodes.DLOAD;
+                            break;
+                        default:
+                            loadCode = Opcodes.ALOAD;
+                            break;
                     }
                     mv.visitIntInsn(loadCode, 1);
                     mv.visitFieldInsn(Opcodes.PUTFIELD, thisBinaryName, field.name, field.typeDescriptor);

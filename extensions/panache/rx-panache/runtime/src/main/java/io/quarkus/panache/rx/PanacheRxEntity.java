@@ -30,11 +30,11 @@ public abstract class PanacheRxEntity<T extends PanacheRxEntity<T>> extends Pana
     public Long getId() {
         return id;
     }
-    
+
     public void setId(Long id) {
         this.id = id;
     }
-    
+
     // FIXME: use regular accessors?
     @Override
     public Object _getId() {

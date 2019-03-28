@@ -248,10 +248,10 @@ public class QuarkusTestExtension
                 }
             }
         };
-        
+
         try {
             runtimeRunner.run();
-        }catch(RuntimeException x) {
+        } catch (RuntimeException x) {
             try {
                 shutdownTask.close();
             } catch (IOException e) {
@@ -259,7 +259,7 @@ public class QuarkusTestExtension
                 e.printStackTrace();
             }
             throw x;
-        }catch(Throwable t) {
+        } catch (Throwable t) {
             try {
                 shutdownTask.close();
             } catch (IOException e) {
