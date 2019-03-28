@@ -233,7 +233,6 @@ public class QuarkusTestExtension
                     }
                 })
                 .build();
-        runtimeRunner.run();
 
         Closeable shutdownTask = new Closeable() {
             @Override
@@ -244,6 +243,27 @@ public class QuarkusTestExtension
                 }
             }
         };
+        
+        try {
+            runtimeRunner.run();
+        }catch(RuntimeException x) {
+            try {
+                shutdownTask.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            throw x;
+        }catch(Throwable t) {
+            try {
+                shutdownTask.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            throw new RuntimeException(t);
+        }
+
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
