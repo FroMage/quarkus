@@ -150,12 +150,12 @@ public class TestEndpoint {
     @GET
     @Path("rx-model-dao")
     public Single<String> testRxModelDao() {
-        System.err.println("A: CL: "+Thread.currentThread().getContextClassLoader());
+        System.err.println("A: CL: " + Thread.currentThread().getContextClassLoader());
         return rxPersonRepository.findAll().toList()
                 .flatMap(persons -> {
                     Assertions.assertEquals(0, persons.size());
 
-                    System.err.println("B: CL: "+Thread.currentThread().getContextClassLoader());
+                    System.err.println("B: CL: " + Thread.currentThread().getContextClassLoader());
                     return makeSavedRxPersonDao();
                 }).flatMap(person -> {
                     Assertions.assertNotNull(person.id);

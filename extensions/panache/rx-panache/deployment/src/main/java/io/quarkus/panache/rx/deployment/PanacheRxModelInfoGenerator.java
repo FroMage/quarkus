@@ -38,7 +38,7 @@ public class PanacheRxModelInfoGenerator {
 
         List<EntityField> fields = new ArrayList<>();
         collectFields(entities, modelClassName, fields);
-        
+
         String modelType = modelClassName.replace('.', '/');
         String modelSignature = "L" + modelType + ";";
         // FIXME
@@ -113,7 +113,8 @@ public class PanacheRxModelInfoGenerator {
 
         // updateStatement
         MethodCreator updateStatement = modelClass.getMethodCreator("updateStatement", String.class);
-        updateStatement.returnValue(updateStatement.load("UPDATE " + tableName + " SET " + updateFieldNoId + " WHERE "+idField.name+" = $1"));
+        updateStatement.returnValue(
+                updateStatement.load("UPDATE " + tableName + " SET " + updateFieldNoId + " WHERE " + idField.name + " = $1"));
 
         // getTableName
         MethodCreator getTableName = modelClass.getMethodCreator("getTableName", String.class);
@@ -142,13 +143,13 @@ public class PanacheRxModelInfoGenerator {
 
     private static void collectFields(Map<String, EntityModel> entities, String modelClassName, List<EntityField> fields) {
         EntityModel entityModel = entities.get(modelClassName);
-        if(entityModel == null)
+        if (entityModel == null)
             return;
-        
+
         // collect supertype fields first
-        if(entityModel.superClassName != null)
+        if (entityModel.superClassName != null)
             collectFields(entities, entityModel.superClassName, fields);
-        
+
         fields.addAll(entityModel.fields.values());
     }
 
@@ -159,7 +160,7 @@ public class PanacheRxModelInfoGenerator {
         AssignableResultHandle variable = fromRow.createVariable(modelSignature);
         // arg-less constructor
         fromRow.assign(variable, fromRow.newInstance(MethodDescriptor.ofConstructor(modelClassName)));
-        
+
         // set each field from the Row
         for (EntityField field : fields) {
             ResultHandle value;
@@ -168,7 +169,8 @@ public class PanacheRxModelInfoGenerator {
                 //              RxDog.<RxDog>find("owner_id = ?1", id).cache();
                 ResultHandle array = fromRow.newArray(Object.class, fromRow.load(1));
                 fromRow.writeArrayValue(array, 0,
-                        fromRow.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor), variable));
+                        fromRow.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
+                                variable));
                 ResultHandle obs = fromRow.invokeStaticMethod(
                         MethodDescriptor.ofMethod(field.entityClassName(), "find", Observable.class, String.class,
                                 Object[].class),
@@ -230,8 +232,9 @@ public class PanacheRxModelInfoGenerator {
         }
         ResultHandle myTuple = creator.invokeStaticMethod(MethodDescriptor.ofMethod(Tuple.class, "tuple", Tuple.class));
 
-        BranchResult branch = creator.ifNull(creator.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
-                entityParam));
+        BranchResult branch = creator
+                .ifNull(creator.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
+                        entityParam));
         branch.trueBranch().close();
         ResultHandle idFieldValue = branch.falseBranch().readInstanceField(
                 FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
@@ -250,8 +253,8 @@ public class PanacheRxModelInfoGenerator {
             if (field.isManyToOne()) {
                 String relationEntityClassName = field.entityClass.name().toString();
                 EntityField relationEntityIdField = getIdField(relationEntityClassName, entities);
-                fieldValue = creator.readInstanceField(FieldDescriptor.of(PanacheRxEntity.class, relationEntityIdField.name, 
-                                                                          relationEntityIdField.typeDescriptor),
+                fieldValue = creator.readInstanceField(FieldDescriptor.of(PanacheRxEntity.class, relationEntityIdField.name,
+                        relationEntityIdField.typeDescriptor),
                         creator.checkCast(
                                 creator.readArrayValue(creator.checkCast(creator.getMethodParam(0), Object[].class),
                                         entityField++),
@@ -295,10 +298,10 @@ public class PanacheRxModelInfoGenerator {
 
     private static EntityField getIdField(String entityClassName, Map<String, EntityModel> entities) {
         EntityModel entityModel = entities.get(entityClassName);
-        if(entityModel.idField != null)
+        if (entityModel.idField != null)
             return entityModel.idField;
-        if(entityModel.superClassName != null)
+        if (entityModel.superClassName != null)
             return getIdField(entityModel.superClassName, entities);
-        throw new RuntimeException("Failed to find ID field for entity "+entityClassName);
+        throw new RuntimeException("Failed to find ID field for entity " + entityClassName);
     }
 }

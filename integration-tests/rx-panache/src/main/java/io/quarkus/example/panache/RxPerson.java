@@ -35,13 +35,11 @@ public class RxPerson extends PanacheRxEntity<RxPerson> {
     //    public static List<Dog> findOrdered() {
     //        return find("ORDER BY name").list();
     //    }
-    
-    
+
     public String getName() {
         return name;
     }
-    
-    
+
     public void setName(String name) {
         this.name = name;
     }
