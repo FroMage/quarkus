@@ -65,132 +65,75 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
         @Override
         public void visitEnd() {
             // findById
-            MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                    "findById",
-                    "(Ljava/lang/Object;)Lio/reactivex/Maybe;",
-                    "(Ljava/lang/Object;)Lio/reactivex/Maybe<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                    null);
-            mv.visitParameter("id", 0);
-            mv.visitCode();
-            mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
-            mv.visitIntInsn(Opcodes.ALOAD, 1);
-            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                    RX_OPERATIONS_BINARY_NAME,
-                    "findById",
-                    "(" + RX_MODEL_INFO_SIGNATURE + "Ljava/lang/Object;)Lio/reactivex/Maybe;", false);
-            mv.visitInsn(Opcodes.ARETURN);
-            mv.visitMaxs(0, 0);
-            mv.visitEnd();
+            generateMethod("findById",
+                           "(Ljava/lang/Object;)Lio/reactivex/Maybe;",
+                           "(Ljava/lang/Object;)Lio/reactivex/Maybe<" + RX_ENTITY_BASE_SIGNATURE + ">;",
+                           Opcodes.ARETURN, "id");
 
             // find
-            mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                    "find",
+            generateMethod("find",
                     "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Observable;",
                     "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Observable<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                    null);
-            mv.visitParameter("query", 0);
-            mv.visitParameter("params", 0);
-            mv.visitCode();
-            mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
-            mv.visitIntInsn(Opcodes.ALOAD, 1);
-            mv.visitIntInsn(Opcodes.ALOAD, 2);
-            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                    RX_OPERATIONS_BINARY_NAME,
-                    "find",
-                    "(" + RX_MODEL_INFO_SIGNATURE + "Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Observable;", false);
-            mv.visitInsn(Opcodes.ARETURN);
-            mv.visitMaxs(0, 0);
-            mv.visitEnd();
+                    Opcodes.ARETURN, "query", "params");
 
             // findAll
-            mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                    "findAll",
+            generateMethod("findAll",
                     "()Lio/reactivex/Observable;",
                     "()Lio/reactivex/Observable<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                    null);
-            mv.visitCode();
-            mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
-            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                    RX_OPERATIONS_BINARY_NAME,
-                    "findAll",
-                    "(" + RX_MODEL_INFO_SIGNATURE + ")Lio/reactivex/Observable;", false);
-            mv.visitInsn(Opcodes.ARETURN);
-            mv.visitMaxs(0, 0);
-            mv.visitEnd();
+                    Opcodes.ARETURN);
 
             // count
-            mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                    "count",
+            generateMethod("count",
                     "()Lio/reactivex/Single;",
                     "()Lio/reactivex/Single<Ljava/lang/Long;>;",
-                    null);
-            mv.visitCode();
-            mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
-            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                    RX_OPERATIONS_BINARY_NAME,
-                    "count",
-                    "(" + RX_MODEL_INFO_SIGNATURE + ")Lio/reactivex/Single;", false);
-            mv.visitInsn(Opcodes.ARETURN);
-            mv.visitMaxs(0, 0);
-            mv.visitEnd();
+                    Opcodes.ARETURN);
 
             // count
-            mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                    "count",
+            generateMethod("count",
                     "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single;",
                     "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single<Ljava/lang/Long;>;",
-                    null);
-            mv.visitParameter("query", 0);
-            mv.visitParameter("params", 0);
-            mv.visitCode();
-            mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
-            mv.visitIntInsn(Opcodes.ALOAD, 1);
-            mv.visitIntInsn(Opcodes.ALOAD, 2);
-            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                    RX_OPERATIONS_BINARY_NAME,
-                    "count",
-                    "(" + RX_MODEL_INFO_SIGNATURE + "Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single;", false);
-            mv.visitInsn(Opcodes.ARETURN);
-            mv.visitMaxs(0, 0);
-            mv.visitEnd();
+                    Opcodes.ARETURN, "query", "params");
 
             // deleteAll
-            mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                    "deleteAll",
+            generateMethod("deleteAll",
                     "()Lio/reactivex/Single;",
                     "()Lio/reactivex/Single<Ljava/lang/Long;>;",
-                    null);
-            mv.visitCode();
-            mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
-            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                    RX_OPERATIONS_BINARY_NAME,
-                    "deleteAll",
-                    "(" + RX_MODEL_INFO_SIGNATURE + ")Lio/reactivex/Single;", false);
-            mv.visitInsn(Opcodes.ARETURN);
-            mv.visitMaxs(0, 0);
-            mv.visitEnd();
+                    Opcodes.ARETURN);
 
             // delete
-            mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                    "delete",
+            generateMethod("delete",
                     "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single;",
                     "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single<Ljava/lang/Long;>;",
-                    null);
-            mv.visitParameter("query", 0);
-            mv.visitParameter("params", 0);
-            mv.visitCode();
-            mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
-            mv.visitIntInsn(Opcodes.ALOAD, 1);
-            mv.visitIntInsn(Opcodes.ALOAD, 2);
-            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                    RX_OPERATIONS_BINARY_NAME,
-                    "delete",
-                    "(" + RX_MODEL_INFO_SIGNATURE + "Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single;", false);
-            mv.visitInsn(Opcodes.ARETURN);
-            mv.visitMaxs(0, 0);
-            mv.visitEnd();
+                    Opcodes.ARETURN, "query", "params");
 
             super.visitEnd();
+
+        }
+
+        private void generateMethod(String name, String descriptor, String signature, int returnOpCode, String... params) {
+            MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
+                                                 name,
+                                                 descriptor,
+                                                 signature,
+                                                 null);
+            for (int i = 0; i < params.length; i++) {
+                mv.visitParameter(params[i], 0 /* modifiers */);
+            }
+            mv.visitCode();
+            // inject model
+            mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
+            for (int i = 0; i < params.length; i++) {
+                mv.visitIntInsn(Opcodes.ALOAD, i + 1);
+            }
+            // inject model
+            String forwardingDescriptor = "(" + RX_MODEL_INFO_SIGNATURE + descriptor.substring(1);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
+                               RX_OPERATIONS_BINARY_NAME,
+                               name,
+                               forwardingDescriptor, false);
+            mv.visitInsn(returnOpCode);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
 
         }
     }
