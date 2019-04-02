@@ -1,6 +1,5 @@
 package io.quarkus.panache.rx;
 
-import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;

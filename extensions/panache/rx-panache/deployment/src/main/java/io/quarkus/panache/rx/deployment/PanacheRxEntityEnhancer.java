@@ -149,45 +149,45 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
             // findById
             generateMethod("findById",
-                           "(Ljava/lang/Object;)Lio/reactivex/Maybe;",
-                           "(Ljava/lang/Object;)Lio/reactivex/Maybe<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                           Opcodes.ARETURN, "id");
-            
+                    "(Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage;",
+                    "(Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage<" + RX_ENTITY_BASE_SIGNATURE + ">;",
+                    Opcodes.ARETURN, "id");
+
             // find
             generateMethod("find",
-                           "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Observable;",
-                           "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Observable<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                           Opcodes.ARETURN, "query", "params");
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Lorg/reactivestreams/Publisher;",
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Lorg/reactivestreams/Publisher<" + RX_ENTITY_BASE_SIGNATURE + ">;",
+                    Opcodes.ARETURN, "query", "params");
 
             // findAll
             generateMethod("findAll",
-                           "()Lio/reactivex/Observable;",
-                           "()Lio/reactivex/Observable<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                           Opcodes.ARETURN);
+                    "()Lorg/reactivestreams/Publisher;",
+                    "()Lorg/reactivestreams/Publisher<" + RX_ENTITY_BASE_SIGNATURE + ">;",
+                    Opcodes.ARETURN);
 
             // count
             generateMethod("count",
-                           "()Lio/reactivex/Single;",
-                           "()Lio/reactivex/Single<Ljava/lang/Long;>;",
-                           Opcodes.ARETURN);
+                    "()Ljava/util/concurrent/CompletionStage;",
+                    "()Ljava/util/concurrent/CompletionStage<Ljava/lang/Long;>;",
+                    Opcodes.ARETURN);
 
             // count
             generateMethod("count",
-                           "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single;",
-                           "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single<Ljava/lang/Long;>;",
-                           Opcodes.ARETURN, "query", "params");
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage;",
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage<Ljava/lang/Long;>;",
+                    Opcodes.ARETURN, "query", "params");
 
             // deleteAll
             generateMethod("deleteAll",
-                           "()Lio/reactivex/Single;",
-                           "()Lio/reactivex/Single<Ljava/lang/Long;>;",
-                           Opcodes.ARETURN);
+                    "()Ljava/util/concurrent/CompletionStage;",
+                    "()Ljava/util/concurrent/CompletionStage<Ljava/lang/Long;>;",
+                    Opcodes.ARETURN);
 
             // delete
             generateMethod("delete",
-                           "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single;",
-                           "(Ljava/lang/String;[Ljava/lang/Object;)Lio/reactivex/Single<Ljava/lang/Long;>;",
-                           Opcodes.ARETURN, "query", "params");
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage;",
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage<Ljava/lang/Long;>;",
+                    Opcodes.ARETURN, "query", "params");
 
             generateAccessors();
 
@@ -195,16 +195,16 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
         }
 
-        private void generateMethod(String name, 
-                                    String descriptor, 
-                                    String signature, 
-                                    int returnOperation, 
-                                    String... parameters) {
+        private void generateMethod(String name,
+                String descriptor,
+                String signature,
+                int returnOperation,
+                String... parameters) {
             MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
-                                                 name,
-                                                 descriptor,
-                                                 signature,
-                                                 null);
+                    name,
+                    descriptor,
+                    signature,
+                    null);
             for (int i = 0; i < parameters.length; i++) {
                 mv.visitParameter(parameters[i], 0 /* modifiers */);
             }
@@ -217,9 +217,9 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             // inject model
             String forwardingDescriptor = "(" + RX_MODEL_INFO_SIGNATURE + descriptor.substring(1);
             mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                               RX_OPERATIONS_BINARY_NAME,
-                               name,
-                               forwardingDescriptor, false);
+                    RX_OPERATIONS_BINARY_NAME,
+                    name,
+                    forwardingDescriptor, false);
             mv.visitInsn(returnOperation);
             mv.visitMaxs(0, 0);
             mv.visitEnd();

@@ -1,8 +1,9 @@
 package io.quarkus.panache.rx;
 
-import io.reactiverse.reactivex.pgclient.Row;
-import io.reactiverse.reactivex.pgclient.Tuple;
-import io.reactivex.Single;
+import java.util.concurrent.CompletionStage;
+
+import io.reactiverse.axle.pgclient.Row;
+import io.reactiverse.axle.pgclient.Tuple;
 
 public interface RxModelInfo<T extends PanacheRxEntityBase<?>> {
     Class<T> getEntityClass();
@@ -15,5 +16,5 @@ public interface RxModelInfo<T extends PanacheRxEntityBase<?>> {
 
     String updateStatement();
 
-    Single<Tuple> toTuple(T entity);
+    CompletionStage<Tuple> toTuple(T entity);
 }

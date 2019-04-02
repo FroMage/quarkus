@@ -4,17 +4,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.concurrent.ExecutionException;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import io.reactiverse.axle.pgclient.PgClient;
+import io.reactiverse.axle.pgclient.PgPool;
 import io.reactiverse.pgclient.PgPoolOptions;
-import io.reactiverse.reactivex.pgclient.PgClient;
-import io.reactiverse.reactivex.pgclient.PgPool;
 
 @ApplicationScoped
 public class PgPoolProducer {
@@ -69,9 +69,13 @@ public class PgPoolProducer {
                     if (line.startsWith("--") || line.isEmpty())
                         continue;
                     // FIXME: multi-line SQL?
-                    pool.rxQuery(line).blockingGet();
+                    pool.query(line).toCompletableFuture().get();
                 }
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
                 e.printStackTrace();
             }
         }

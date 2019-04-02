@@ -20,8 +20,10 @@ import javax.persistence.CascadeType;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 
+import org.eclipse.microprofile.reactive.streams.operators.ReactiveStreams;
+import org.reactivestreams.Publisher;
+
 import io.quarkus.panache.rx.PanacheRxEntity;
-import io.reactivex.Observable;
 
 public class RxPerson extends PanacheRxEntity<RxPerson> {
 
@@ -30,17 +32,9 @@ public class RxPerson extends PanacheRxEntity<RxPerson> {
     public Status status;
 
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    public Observable<RxDog> dogs = Observable.empty();
+    public Publisher<RxDog> dogs = ReactiveStreams.<RxDog> empty().buildRs();
 
     //    public static List<Dog> findOrdered() {
     //        return find("ORDER BY name").list();
     //    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
 }

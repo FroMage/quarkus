@@ -2,65 +2,94 @@ package io.quarkus.panache.rx.runtime;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import javax.persistence.Query;
+
+import org.eclipse.microprofile.reactive.streams.operators.ReactiveStreams;
+import org.reactivestreams.Publisher;
 
 import io.quarkus.arc.Arc;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.RxModelInfo;
-import io.reactiverse.reactivex.pgclient.PgPool;
-import io.reactiverse.reactivex.pgclient.Row;
-import io.reactiverse.reactivex.pgclient.Tuple;
-import io.reactivex.Completable;
-import io.reactivex.Maybe;
-import io.reactivex.Observable;
-import io.reactivex.Single;
+import io.reactiverse.axle.pgclient.PgPool;
+import io.reactiverse.axle.pgclient.Row;
+import io.reactiverse.axle.pgclient.Tuple;
 
 public class RxOperations {
 
     // 
     // instance methods
 
-    public static <T extends PanacheRxEntityBase<?>> Single<? extends T> save(T entity) {
+    public static <T extends PanacheRxEntityBase<?>> CompletionStage<? extends T> save(T entity) {
         PgPool pool = getPgPool();
         @SuppressWarnings("unchecked")
         RxModelInfo<T> modelInfo = (RxModelInfo<T>) entity.getModelInfo();
         // FIXME: custom id generation
         return modelInfo.toTuple(entity)
-                .flatMap(t -> {
+                .thenCompose(t -> {
                     if (entity._getId() == null)
-                        return pool.rxPreparedQuery("SELECT nextval('hibernate_sequence') AS id")
-                                .map(rowset -> rowset.iterator().next().getLong("id"))
-                                .flatMap(id -> {
+                        return pool.preparedQuery("SELECT nextval('hibernate_sequence') AS id")
+                                .thenApply(rowset -> rowset.iterator().next().getLong("id"))
+                                .thenCompose(id -> {
                                     // non-persisted tuples are missing their id
                                     Tuple withId = Tuple.tuple();
                                     withId.addValue(id);
                                     for (int i = 0; i < t.size(); i++) {
                                         withId.addValue(t.getValue(i));
                                     }
-                                    return pool.rxPreparedQuery(modelInfo.insertStatement(), withId)
-                                            .map(rowset -> {
+                                    return pool.preparedQuery(modelInfo.insertStatement(), withId)
+                                            .thenApply(rowset -> {
                                                 entity._setId(id);
                                                 return entity;
                                             });
                                 });
                     else
-                        return pool.rxPreparedQuery(modelInfo.updateStatement(), t)
-                                .map(rowset -> entity);
+                        return pool.preparedQuery(modelInfo.updateStatement(), t)
+                                .thenApply(rowset -> entity);
                 });
     }
 
-    public static <T extends PanacheRxEntityBase<?>> Completable delete(T entity) {
+    public static <T extends PanacheRxEntityBase<?>> CompletionStage<Void> delete(T entity) {
         PgPool pool = getPgPool();
         // FIXME: id column from model info
-        return pool.rxPreparedQuery("DELETE FROM " + entity.getModelInfo().getTableName() + " WHERE id = $1",
-                Tuple.of(entity._getId())).ignoreElement();
+        return pool.preparedQuery("DELETE FROM " + entity.getModelInfo().getTableName() + " WHERE id = $1",
+                Tuple.of(entity._getId()))
+                // ignoreElement
+                .thenApply(rowset -> null);
+    }
+
+    public static <T> CompletionStage<T> deferCompletionStage(Callable<CompletionStage<T>> csSource) {
+        return new LazyCompletionStage<T>(csSource);
+    }
+
+    public static <T> Publisher<T> deferPublisher(Callable<Publisher<T>> publisherSource) {
+        return new LazyPublisher<T>(publisherSource);
+    }
+
+    public static <T, R> CompletionStage<R> zipArray(Function<? super Object[], ? extends R> zipper,
+            CompletionStage<? extends T>... sources) {
+        Object[] results = new Object[sources.length];
+        CompletionStage<?> state = CompletableFuture.completedFuture(null);
+        for (int i = 0; i < sources.length; i++) {
+            CompletionStage<? extends T> completionStage = sources[i];
+            int finalI = i;
+            CompletionStage<Void> stage = completionStage.thenAccept(result -> {
+                results[finalI] = result;
+            });
+            state = state.thenCompose(v -> stage);
+        }
+        return state.thenApply(v -> zipper.apply(results));
     }
 
     //
     // Private stuff
 
     private static PgPool getPgPool() {
+        // FIXME: make it return CompletionStage to make it deferred
         io.reactiverse.pgclient.PgPool pgPool = Arc.container().instance(io.reactiverse.pgclient.PgPool.class).get();
         return PgPool.newInstance(pgPool);
     }
@@ -174,11 +203,11 @@ public class RxOperations {
     //
     // Static Helpers
 
-    public static <T extends PanacheRxEntityBase<?>> Observable<T> findAll(RxModelInfo<T> modelInfo) {
+    public static <T extends PanacheRxEntityBase<?>> Publisher<T> findAll(RxModelInfo<T> modelInfo) {
         PgPool pool = getPgPool();
         // FIXME: field list and order by from model info
-        return pool.rxQuery("SELECT * FROM " + modelInfo.getTableName() + " ORDER BY name")
-                .flatMapObservable(rowset -> Observable.fromIterable(rowset.getDelegate()))
+        return ReactiveStreams.fromCompletionStage(pool.query("SELECT * FROM " + modelInfo.getTableName() + " ORDER BY name"))
+                .flatMap(rowset -> ReactiveStreams.fromIterable(rowset.getDelegate()))
                 .map(coreRow -> {
                     try {
                         Row row = Row.newInstance(coreRow);
@@ -188,27 +217,27 @@ public class RxOperations {
                         t.printStackTrace();
                         return null;
                     }
+                }).buildRs();
+    }
+
+    public static <T extends PanacheRxEntityBase<?>> CompletionStage<T> findById(RxModelInfo<T> modelInfo, Object id) {
+        PgPool pool = getPgPool();
+        // FIXME: field list and id column name from model info
+        return pool.preparedQuery("SELECT * FROM " + modelInfo.getTableName() + " WHERE id = $1", Tuple.of(id))
+                .thenApply(rowset -> {
+                    if (rowset.size() == 1)
+                        return modelInfo.fromRow(rowset.iterator().next());
+                    return null;
                 });
     }
 
-    public static <T extends PanacheRxEntityBase<?>> Maybe<T> findById(RxModelInfo<T> modelInfo, Object id) {
-        PgPool pool = getPgPool();
-        // FIXME: field list and id column name from model info
-        return pool.rxPreparedQuery("SELECT * FROM " + modelInfo.getTableName() + " WHERE id = $1", Tuple.of(id))
-                .flatMapMaybe(rowset -> {
-                    if (rowset.size() == 1)
-                        return Maybe.just(rowset.iterator().next());
-                    return Maybe.empty();
-                })
-                .map(row -> modelInfo.fromRow(row));
-    }
-
-    public static <T extends PanacheRxEntityBase<?>> Observable<T> find(RxModelInfo<T> modelInfo, String query,
+    public static <T extends PanacheRxEntityBase<?>> Publisher<T> find(RxModelInfo<T> modelInfo, String query,
             Object... params) {
         PgPool pool = getPgPool();
         // FIXME: order by from model info
-        return pool.rxPreparedQuery(createFindQuery(modelInfo, query, params), toParams(params))
-                .flatMapObservable(rowset -> Observable.fromIterable(rowset.getDelegate()))
+        return ReactiveStreams
+                .fromCompletionStage(pool.preparedQuery(createFindQuery(modelInfo, query, params), toParams(params)))
+                .flatMap(rowset -> ReactiveStreams.fromIterable(rowset.getDelegate()))
                 .map(coreRow -> {
                     try {
                         return modelInfo.fromRow(Row.newInstance(coreRow));
@@ -216,30 +245,30 @@ public class RxOperations {
                         t.printStackTrace();
                         return null;
                     }
-                });
+                }).buildRs();
     }
 
-    public static Single<Long> count(RxModelInfo<?> modelInfo) {
+    public static CompletionStage<Long> count(RxModelInfo<?> modelInfo) {
         PgPool pool = getPgPool();
-        return pool.rxQuery("SELECT COUNT(*) FROM " + modelInfo.getTableName())
-                .map(rowset -> rowset.iterator().next().getLong(0));
+        return pool.query("SELECT COUNT(*) FROM " + modelInfo.getTableName())
+                .thenApply(rowset -> rowset.iterator().next().getLong(0));
     }
 
-    public static Single<Long> count(RxModelInfo<?> modelInfo, String query, Object... params) {
+    public static CompletionStage<Long> count(RxModelInfo<?> modelInfo, String query, Object... params) {
         PgPool pool = getPgPool();
-        return pool.rxPreparedQuery(createCountQuery(modelInfo, query, params), toParams(params))
-                .map(rowset -> rowset.iterator().next().getLong(0));
+        return pool.preparedQuery(createCountQuery(modelInfo, query, params), toParams(params))
+                .thenApply(rowset -> rowset.iterator().next().getLong(0));
     }
 
-    public static Single<Long> deleteAll(RxModelInfo<?> modelInfo) {
+    public static CompletionStage<Long> deleteAll(RxModelInfo<?> modelInfo) {
         PgPool pool = getPgPool();
-        return pool.rxQuery("DELETE FROM " + modelInfo.getTableName())
-                .map(rowset -> (long) rowset.rowCount());
+        return pool.query("DELETE FROM " + modelInfo.getTableName())
+                .thenApply(rowset -> (long) rowset.rowCount());
     }
 
-    public static Single<Long> delete(RxModelInfo<?> modelInfo, String query, Object... params) {
+    public static CompletionStage<Long> delete(RxModelInfo<?> modelInfo, String query, Object... params) {
         PgPool pool = getPgPool();
-        return pool.rxPreparedQuery(createDeleteQuery(modelInfo, query, params), toParams(params))
-                .map(rowset -> (long) rowset.rowCount());
+        return pool.preparedQuery(createDeleteQuery(modelInfo, query, params), toParams(params))
+                .thenApply(rowset -> (long) rowset.rowCount());
     }
 }
