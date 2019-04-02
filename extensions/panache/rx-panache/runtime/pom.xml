@@ -20,6 +20,7 @@
 
     <properties>
         <version.reactive-pg-client>0.11.1</version.reactive-pg-client>
+        <version.reactive-pg-client-axle>0.0.3</version.reactive-pg-client-axle>
     </properties>
 
     <dependencies>
@@ -40,23 +41,13 @@
             <artifactId>javax.persistence-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.reactiverse</groupId>
-            <artifactId>reactive-pg-client</artifactId>
-            <version>${version.reactive-pg-client}</version>
+            <groupId>io.smallrye.reactive</groupId>
+            <artifactId>smallrye-axle-postgres-client</artifactId>
+            <version>${version.reactive-pg-client-axle}</version>
         </dependency>
         <dependency>
-            <groupId>io.reactivex.rxjava2</groupId>
-            <artifactId>rxjava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-rx-java2</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-core</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>io.smallrye.reactive</groupId>
+            <artifactId>smallrye-reactive-streams-operators</artifactId>
         </dependency>
     </dependencies>
 

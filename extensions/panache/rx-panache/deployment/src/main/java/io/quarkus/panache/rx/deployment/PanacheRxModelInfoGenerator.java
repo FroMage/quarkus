@@ -4,8 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import org.objectweb.asm.Opcodes;
+import org.reactivestreams.Publisher;
 
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
@@ -23,13 +27,9 @@ import io.quarkus.panache.rx.PanacheRxEntity;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.RxModelInfo;
 import io.quarkus.panache.rx.deployment.PanacheRxResourceProcessor.ProcessorClassOutput;
-import io.reactiverse.reactivex.pgclient.Row;
-import io.reactiverse.reactivex.pgclient.Tuple;
-import io.reactivex.Maybe;
-import io.reactivex.Observable;
-import io.reactivex.Single;
-import io.reactivex.SingleSource;
-import io.reactivex.functions.Function;
+import io.quarkus.panache.rx.runtime.RxOperations;
+import io.reactiverse.axle.pgclient.Row;
+import io.reactiverse.axle.pgclient.Tuple;
 
 public class PanacheRxModelInfoGenerator {
 
@@ -124,10 +124,10 @@ public class PanacheRxModelInfoGenerator {
         createToTuple(modelClass, modelClassName, fields, manyToOnes, entities, idField);
 
         // Bridge methods
-        MethodCreator toTupleBridge = modelClass.getMethodCreator("toTuple", Single.class, PanacheRxEntityBase.class);
+        MethodCreator toTupleBridge = modelClass.getMethodCreator("toTuple", CompletionStage.class, PanacheRxEntityBase.class);
         toTupleBridge.setModifiers(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
         toTupleBridge.returnValue(toTupleBridge.invokeVirtualMethod(MethodDescriptor.ofMethod(modelInfoClassName, "toTuple",
-                Single.class, modelClassName),
+                CompletionStage.class, modelClassName),
                 toTupleBridge.getThis(),
                 toTupleBridge.checkCast(toTupleBridge.getMethodParam(0), modelClassName)));
 
@@ -166,19 +166,26 @@ public class PanacheRxModelInfoGenerator {
             ResultHandle value;
             AssignableResultHandle fieldValue = fromRow.createVariable(field.typeDescriptor);
             if (field.isOneToMany()) {
-                //              RxDog.<RxDog>find("owner_id = ?1", id).cache();
-                ResultHandle array = fromRow.newArray(Object.class, fromRow.load(1));
-                fromRow.writeArrayValue(array, 0,
-                        fromRow.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
+                // fieldValue = RxOperations.deferPublisher(() -> RxDog.<RxDog>find("owner_id = ?1", id));
+                FunctionCreator deferred = fromRow.createFunction(Callable.class);
+                BytecodeCreator deferredCreator = deferred.getBytecode();
+
+                ResultHandle array = deferredCreator.newArray(Object.class, deferredCreator.load(1));
+                deferredCreator.writeArrayValue(array, 0,
+                        deferredCreator.readInstanceField(
+                                FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
                                 variable));
-                ResultHandle obs = fromRow.invokeStaticMethod(
-                        MethodDescriptor.ofMethod(field.entityClassName(), "find", Observable.class, String.class,
+                ResultHandle obs = deferredCreator.invokeStaticMethod(
+                        MethodDescriptor.ofMethod(field.entityClassName(), "find", Publisher.class, String.class,
                                 Object[].class),
                         // FIXME: do not hardcode
-                        fromRow.load(field.reverseField + "_id = ?1"), array);
-                value = fromRow.invokeVirtualMethod(MethodDescriptor.ofMethod(Observable.class, "cache", Observable.class),
-                        obs);
-                fromRow.assign(fieldValue, value);
+                        deferredCreator.load(field.reverseField + "_id = ?1"), array);
+                deferredCreator.returnValue(obs);
+                deferredCreator.close();
+                // FIXME: ADD CACHE?
+                fromRow.assign(fieldValue, fromRow.invokeStaticMethod(
+                        MethodDescriptor.ofMethod(RxOperations.class, "deferPublisher", Publisher.class, Callable.class),
+                        deferred.getInstance()));
             } else {
                 value = fromRow.invokeVirtualMethod(
                         MethodDescriptor.ofMethod(Row.class, field.getFromRowMethod(), field.mappedTypeClassName(),
@@ -200,14 +207,14 @@ public class PanacheRxModelInfoGenerator {
                     FunctionCreator deferred = fromRow.createFunction(Callable.class);
                     BytecodeCreator deferredCreator = deferred.getBytecode();
                     ResultHandle byId = deferredCreator.invokeStaticMethod(
-                            MethodDescriptor.ofMethod(field.entityClassName(), "findById", Maybe.class, Object.class), value);
-                    ResultHandle toSingle = deferredCreator
-                            .invokeVirtualMethod(MethodDescriptor.ofMethod(Maybe.class, "toSingle", Single.class), byId);
-                    ResultHandle cached = deferredCreator
-                            .invokeVirtualMethod(MethodDescriptor.ofMethod(Single.class, "cache", Single.class), toSingle);
-                    deferredCreator.returnValue(cached);
+                            MethodDescriptor.ofMethod(field.entityClassName(), "findById", CompletionStage.class, Object.class),
+                            value);
+                    // fieldValue = RxOperations.deferCompletionStage(() -> findById(value))
+                    deferredCreator.returnValue(byId);
+                    deferredCreator.close();
                     fromRow.assign(fieldValue, fromRow.invokeStaticMethod(
-                            MethodDescriptor.ofMethod(Single.class, "defer", Single.class, Callable.class),
+                            MethodDescriptor.ofMethod(RxOperations.class, "deferCompletionStage", CompletionStage.class,
+                                    Callable.class),
                             deferred.getInstance()));
                 } else {
                     fromRow.assign(fieldValue, value);
@@ -221,7 +228,7 @@ public class PanacheRxModelInfoGenerator {
 
     private static void createToTuple(ClassCreator modelClass, String modelClassName, List<EntityField> fields,
             int manyToOnes, Map<String, EntityModel> entities, EntityField idField) {
-        MethodCreator toTuple = modelClass.getMethodCreator("toTuple", Single.class, modelClassName);
+        MethodCreator toTuple = modelClass.getMethodCreator("toTuple", CompletionStage.class, modelClassName);
         ResultHandle entityParam = toTuple.getMethodParam(0);
 
         BytecodeCreator creator = toTuple;
@@ -251,8 +258,11 @@ public class PanacheRxModelInfoGenerator {
                 continue;
             ResultHandle fieldValue;
             if (field.isManyToOne()) {
+                // we get the value from the function parameter
+                // fieldValue = (($relationEntityClassName)((Object[])param)[{entityField++}]).id;
                 String relationEntityClassName = field.entityClass.name().toString();
                 EntityField relationEntityIdField = getIdField(relationEntityClassName, entities);
+                // FIXME: wrong field type
                 fieldValue = creator.readInstanceField(FieldDescriptor.of(PanacheRxEntity.class, relationEntityIdField.name,
                         relationEntityIdField.typeDescriptor),
                         creator.checkCast(
@@ -260,6 +270,7 @@ public class PanacheRxModelInfoGenerator {
                                         entityField++),
                                 relationEntityClassName));
             } else {
+                // fieldValue = entityParam.${field.name}
                 fieldValue = creator.readInstanceField(FieldDescriptor.of(modelClassName, field.name, field.typeDescriptor),
                         entityParam);
             }
@@ -273,25 +284,32 @@ public class PanacheRxModelInfoGenerator {
         }
 
         if (manyToOnes > 0) {
+            // f = () -> ... myTuple
             creator.returnValue(myTuple);
 
-            AssignableResultHandle myArgs = toTuple.createVariable(SingleSource[].class);
-            toTuple.assign(myArgs, toTuple.newArray(SingleSource[].class, toTuple.load(manyToOnes)));
+            // CompletionStage[] myArgs = new CompletionStage[$manyToOnes]
+            AssignableResultHandle myArgs = toTuple.createVariable(CompletionStage[].class);
+            toTuple.assign(myArgs, toTuple.newArray(CompletionStage[].class, toTuple.load(manyToOnes)));
             int i = 0;
             for (EntityField field : fields) {
                 if (!field.isManyToOne())
                     continue;
-                toTuple.writeArrayValue(myArgs, i,
+                // myArgs[$i++] = entityParam.${field.name};
+                toTuple.writeArrayValue(myArgs, i++,
                         toTuple.readInstanceField(FieldDescriptor.of(modelClassName, field.name, field.typeDescriptor),
                                 entityParam));
             }
-
+            // return RxOperations.zipArray(f, myArgs)
             toTuple.returnValue(toTuple.invokeStaticMethod(
-                    MethodDescriptor.ofMethod(Single.class, "zipArray", Single.class, Function.class, SingleSource[].class),
+                    MethodDescriptor.ofMethod(RxOperations.class, "zipArray", CompletionStage.class, Function.class,
+                            CompletionStage[].class),
                     myFunction.getInstance(), myArgs));
         } else {
+            // return CompletableFuture.completedFuture(myTuple)
             creator.returnValue(
-                    creator.invokeStaticMethod(MethodDescriptor.ofMethod(Single.class, "just", Single.class, Object.class),
+                    creator.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(CompletableFuture.class, "completedFuture", CompletableFuture.class,
+                                    Object.class),
                             myTuple));
         }
     }

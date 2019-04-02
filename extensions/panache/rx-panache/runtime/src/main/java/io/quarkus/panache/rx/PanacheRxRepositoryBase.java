@@ -1,16 +1,10 @@
 package io.quarkus.panache.rx;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
+import java.util.concurrent.CompletionStage;
 
-import io.quarkus.panache.common.Parameters;
-import io.quarkus.panache.common.Sort;
+import org.reactivestreams.Publisher;
+
 import io.quarkus.panache.rx.runtime.RxOperations;
-import io.reactivex.Completable;
-import io.reactivex.Maybe;
-import io.reactivex.Observable;
-import io.reactivex.Single;
 
 /**
  * <p>
@@ -26,42 +20,42 @@ import io.reactivex.Single;
  */
 public interface PanacheRxRepositoryBase<Entity extends PanacheRxEntityBase<Entity>, Id> {
 
-    public default Single<? extends Entity> save(Entity entity) {
+    public default CompletionStage<? extends Entity> save(Entity entity) {
         return RxOperations.save(entity);
     }
 
-    public default Completable delete(Entity entity) {
+    public default CompletionStage<Void> delete(Entity entity) {
         return RxOperations.delete(entity);
     }
 
     //
     // Static Helpers
 
-    public default Observable<Entity> findAll() {
+    public default Publisher<Entity> findAll() {
         throw new RuntimeException("Should never be called");
     }
 
-    public default Maybe<Entity> findById(Id id) {
+    public default CompletionStage<Entity> findById(Id id) {
         throw new RuntimeException("Should never be called");
     }
 
-    public default Observable<Entity> find(String query, Object... params) {
+    public default Publisher<Entity> find(String query, Object... params) {
         throw new RuntimeException("Should never be called");
     }
 
-    public default Single<Long> count() {
+    public default CompletionStage<Long> count() {
         throw new RuntimeException("Should never be called");
     }
 
-    public default Single<Long> count(String query, Object... params) {
+    public default CompletionStage<Long> count(String query, Object... params) {
         throw new RuntimeException("Should never be called");
     }
 
-    public default Single<Long> deleteAll() {
+    public default CompletionStage<Long> deleteAll() {
         throw new RuntimeException("Should never be called");
     }
 
-    public default Single<Long> delete(String query, Object... params) {
+    public default CompletionStage<Long> delete(String query, Object... params) {
         throw new RuntimeException("Should never be called");
     }
 }

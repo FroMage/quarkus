@@ -1,5 +1,7 @@
 package io.quarkus.example.panache;
 
+import java.util.concurrent.CompletionStage;
+
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -21,7 +23,7 @@ public class RxDog extends PanacheRxEntityBase<RxDog> {
     public String race;
 
     @ManyToOne
-    public Single<RxPerson> owner;
+    public CompletionStage<RxPerson> owner;
 
     public RxDog(String name, String race) {
         this.name = name;

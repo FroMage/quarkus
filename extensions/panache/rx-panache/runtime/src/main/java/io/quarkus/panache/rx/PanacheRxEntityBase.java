@@ -1,19 +1,13 @@
 package io.quarkus.panache.rx;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Stream;
+import java.util.concurrent.CompletionStage;
 
 import javax.persistence.Transient;
 
-import io.quarkus.panache.common.Parameters;
-import io.quarkus.panache.common.Sort;
+import org.reactivestreams.Publisher;
+
 import io.quarkus.panache.rx.runtime.RxOperations;
-import io.reactivex.Completable;
-import io.reactivex.Maybe;
-import io.reactivex.Observable;
-import io.reactivex.Single;
 
 /**
  * <p>
@@ -33,11 +27,11 @@ public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<?>> {
     public abstract void _setId(Object id);
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    public Single<? extends T> save() {
-        return (Single) RxOperations.save(this);
+    public CompletionStage<? extends T> save() {
+        return (CompletionStage) RxOperations.save(this);
     }
 
-    public Completable delete() {
+    public CompletionStage<Void> delete() {
         return RxOperations.delete(this);
     }
 
@@ -65,31 +59,31 @@ public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<?>> {
     //
     // Static Helpers
 
-    public static <T extends PanacheRxEntityBase<?>> Observable<T> findAll() {
+    public static <T extends PanacheRxEntityBase<?>> Publisher<T> findAll() {
         throw new RuntimeException("Should never be called");
     }
 
-    public static <T extends PanacheRxEntityBase<?>> Maybe<T> findById(Object id) {
+    public static <T extends PanacheRxEntityBase<?>> CompletionStage<T> findById(Object id) {
         throw new RuntimeException("Should never be called");
     }
 
-    public static <T extends PanacheRxEntityBase<?>> Observable<T> find(String query, Object... params) {
+    public static <T extends PanacheRxEntityBase<?>> Publisher<T> find(String query, Object... params) {
         throw new RuntimeException("Should never be called");
     }
 
-    public static Single<Long> count() {
+    public static CompletionStage<Long> count() {
         throw new RuntimeException("Should never be called");
     }
 
-    public static Single<Long> count(String query, Object... params) {
+    public static CompletionStage<Long> count(String query, Object... params) {
         throw new RuntimeException("Should never be called");
     }
 
-    public static Single<Long> deleteAll() {
+    public static CompletionStage<Long> deleteAll() {
         throw new RuntimeException("Should never be called");
     }
 
-    public static Single<Long> delete(String query, Object... params) {
+    public static CompletionStage<Long> delete(String query, Object... params) {
         throw new RuntimeException("Should never be called");
     }
 }
