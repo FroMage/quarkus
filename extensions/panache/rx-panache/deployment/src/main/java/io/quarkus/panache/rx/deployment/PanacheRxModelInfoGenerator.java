@@ -166,7 +166,7 @@ public class PanacheRxModelInfoGenerator {
             ResultHandle value;
             AssignableResultHandle fieldValue = fromRow.createVariable(field.typeDescriptor);
             if (field.isOneToMany()) {
-                // fieldValue = RxOperations.deferPublisher(() -> RxDog.<RxDog>find("owner_id = ?1", id));
+                // fieldValue = RxOperations.deferPublisher(() -> RxDog.<RxDog>stream("owner_id = ?1", id));
                 FunctionCreator deferred = fromRow.createFunction(Callable.class);
                 BytecodeCreator deferredCreator = deferred.getBytecode();
 
@@ -176,7 +176,7 @@ public class PanacheRxModelInfoGenerator {
                                 FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
                                 variable));
                 ResultHandle obs = deferredCreator.invokeStaticMethod(
-                        MethodDescriptor.ofMethod(field.entityClassName(), "find", Publisher.class, String.class,
+                        MethodDescriptor.ofMethod(field.entityClassName(), "stream", Publisher.class, String.class,
                                 Object[].class),
                         // FIXME: do not hardcode
                         deferredCreator.load(field.reverseField + "_id = ?1"), array);

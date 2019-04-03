@@ -1,10 +1,13 @@
 package io.quarkus.panache.rx;
 
 import java.util.List;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Stream;
 
 import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
+
+import org.reactivestreams.Publisher;
 
 import io.quarkus.panache.common.Page;
 
@@ -77,7 +80,7 @@ public interface PanacheRxQuery<Entity> {
      * @see #firstPage()
      * @see #count()
      */
-    public <T extends Entity> PanacheRxQuery<T> lastPage();
+    public <T extends Entity> CompletionStage<PanacheRxQuery<T>> lastPage();
 
     /**
      * Returns true if there is another page to read after the current one.
@@ -87,7 +90,7 @@ public interface PanacheRxQuery<Entity> {
      * @see #hasPreviousPage()
      * @see #count()
      */
-    public boolean hasNextPage();
+    public CompletionStage<Boolean> hasNextPage();
 
     /**
      * Returns true if there is a page to read before the current one.
@@ -103,7 +106,7 @@ public interface PanacheRxQuery<Entity> {
      * 
      * @return the total number of pages to be read using the current page size.
      */
-    public int pageCount();
+    public CompletionStage<Integer> pageCount();
 
     /**
      * Returns the current page.
@@ -123,7 +126,7 @@ public interface PanacheRxQuery<Entity> {
      * 
      * @return the total number of entities this query operates on, cached.
      */
-    public long count();
+    public CompletionStage<Long> count();
 
     /**
      * Returns the current page of results as a {@link List}.
@@ -133,7 +136,7 @@ public interface PanacheRxQuery<Entity> {
      * @see #page(Page)
      * @see #page()
      */
-    public <T extends Entity> List<T> list();
+    public <T extends Entity> CompletionStage<List<T>> list();
 
     /**
      * Returns the current page of results as a {@link Stream}.
@@ -143,7 +146,8 @@ public interface PanacheRxQuery<Entity> {
      * @see #page(Page)
      * @see #page()
      */
-    public <T extends Entity> Stream<T> stream();
+//    public <T extends Entity> CompletionStage<Stream<T>> stream();
+    public <T extends Entity> Publisher<T> stream();
 
     /**
      * Returns the first result of the current page index. This ignores the current page size to fetch
@@ -152,7 +156,7 @@ public interface PanacheRxQuery<Entity> {
      * @return the first result of the current page index, or null if there are no results.
      * @see #singleResult()
      */
-    public <T extends Entity> T firstResult();
+    public <T extends Entity> CompletionStage<T> firstResult();
 
     /**
      * Executes this query for the current page and return a single result.
@@ -162,5 +166,5 @@ public interface PanacheRxQuery<Entity> {
      * @throws NonUniqueResultException if there are more than one result
      * @see #firstResult()
      */
-    public <T extends Entity> T singleResult();
+    public <T extends Entity> CompletionStage<T> singleResult();
 }

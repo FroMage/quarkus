@@ -49,10 +49,10 @@ import io.reactiverse.pgclient.PgPool;
  */
 public final class PanacheRxResourceProcessor {
 
-    private static final DotName DOTNAME_PANACHE_RX_REPOSITORY_BASE = DotName
+    static final DotName DOTNAME_PANACHE_RX_REPOSITORY_BASE = DotName
             .createSimple(PanacheRxRepositoryBase.class.getName());
     private static final DotName DOTNAME_PANACHE_RX_REPOSITORY = DotName.createSimple(PanacheRxRepository.class.getName());
-    private static final DotName DOTNAME_PANACHE_RX_ENTITY_BASE = DotName.createSimple(PanacheRxEntityBase.class.getName());
+    static final DotName DOTNAME_PANACHE_RX_ENTITY_BASE = DotName.createSimple(PanacheRxEntityBase.class.getName());
     private static final DotName DOTNAME_PANACHE_RX_ENTITY = DotName.createSimple(PanacheRxEntity.class.getName());
 
     private static final Object DOTNAME_ARC_CLIENT_PROXY = DotName.createSimple(ClientProxy.class.getName());
@@ -91,7 +91,7 @@ public final class PanacheRxResourceProcessor {
             //            BuildProducer<NonJpaModelBuildItem> nonJpaModelBuildItems,
             BuildProducer<GeneratedClassBuildItem> generatedClasses) throws Exception {
 
-        PanacheRxRepositoryEnhancer rxRepositoryEnhancer = new PanacheRxRepositoryEnhancer();
+        PanacheRxRepositoryEnhancer rxRepositoryEnhancer = new PanacheRxRepositoryEnhancer(index.getIndex());
         Set<String> rxRepositoryClasses = new HashSet<>();
         for (ClassInfo classInfo : index.getIndex().getAllKnownImplementors(DOTNAME_PANACHE_RX_REPOSITORY_BASE)) {
             // Skip PanacheRxRepository

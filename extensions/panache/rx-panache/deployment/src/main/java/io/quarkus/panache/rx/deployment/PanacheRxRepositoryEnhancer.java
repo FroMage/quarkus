@@ -1,12 +1,16 @@
 package io.quarkus.panache.rx.deployment;
 
-import static io.quarkus.panache.rx.deployment.PanacheRxEntityEnhancer.RX_ENTITY_BASE_SIGNATURE;
 import static io.quarkus.panache.rx.deployment.PanacheRxEntityEnhancer.RX_MODEL_FIELD_NAME;
 import static io.quarkus.panache.rx.deployment.PanacheRxEntityEnhancer.RX_MODEL_INFO_SIGNATURE;
 import static io.quarkus.panache.rx.deployment.PanacheRxEntityEnhancer.RX_OPERATIONS_BINARY_NAME;
 
+import java.util.List;
 import java.util.function.BiFunction;
 
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.IndexView;
+import org.jboss.jandex.MethodInfo;
+import org.jboss.jandex.Type;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -24,10 +28,17 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
     public final static String PANACHE_RX_REPOSITORY_NAME = PanacheRxRepository.class.getName();
     public final static String PANACHE_RX_REPOSITORY_BINARY_NAME = PANACHE_RX_REPOSITORY_NAME.replace('.', '/');
     public final static String PANACHE_RX_REPOSITORY_SIGNATURE = "L" + PANACHE_RX_REPOSITORY_BINARY_NAME + ";";
+    
+    private ClassInfo panacheRxRepositoryBaseClassInfo;
 
+    
+    public PanacheRxRepositoryEnhancer(IndexView index) {
+        panacheRxRepositoryBaseClassInfo = index.getClassByName(PanacheRxResourceProcessor.DOTNAME_PANACHE_RX_REPOSITORY_BASE);
+    }
+    
     @Override
     public ClassVisitor apply(String className, ClassVisitor outputClassVisitor) {
-        return new RxDaoEnhancingClassVisitor(className, outputClassVisitor);
+        return new RxDaoEnhancingClassVisitor(className, outputClassVisitor, panacheRxRepositoryBaseClassInfo);
     }
 
     static class RxDaoEnhancingClassVisitor extends ClassVisitor {
@@ -35,9 +46,12 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
         private String entityBinaryType;
         private String rxModelInfoType;
         private String rxModelInfoDesc;
+        private ClassInfo panacheRxRepositoryBaseClassInfo;
+        private String entitySignature;
 
-        public RxDaoEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor) {
+        public RxDaoEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor, ClassInfo panacheRxRepositoryBaseClassInfo) {
             super(Opcodes.ASM6, outputClassVisitor);
+            this.panacheRxRepositoryBaseClassInfo = panacheRxRepositoryBaseClassInfo;
         }
 
         @Override
@@ -52,6 +66,7 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
             }
 
             entityBinaryType = daoTypeFetcher.foundType;
+            entitySignature = "L" + entityBinaryType + ";";
             rxModelInfoType = entityBinaryType + PanacheRxEntityEnhancer.RX_MODEL_SUFFIX;
             rxModelInfoDesc = "L" + rxModelInfoType + ";";
         }
@@ -64,74 +79,42 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
 
         @Override
         public void visitEnd() {
-            // findById
-            generateMethod("findById",
-                    "(Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage;",
-                    "(Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                    Opcodes.ARETURN, "id");
-
-            // find
-            generateMethod("find",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Lorg/reactivestreams/Publisher;",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Lorg/reactivestreams/Publisher<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                    Opcodes.ARETURN, "query", "params");
-
-            // findAll
-            generateMethod("findAll",
-                    "()Lorg/reactivestreams/Publisher;",
-                    "()Lorg/reactivestreams/Publisher<" + RX_ENTITY_BASE_SIGNATURE + ">;",
-                    Opcodes.ARETURN);
-
-            // count
-            generateMethod("count",
-                    "()Ljava/util/concurrent/CompletionStage;",
-                    "()Ljava/util/concurrent/CompletionStage<Ljava/lang/Long;>;",
-                    Opcodes.ARETURN);
-
-            // count
-            generateMethod("count",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage;",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage<Ljava/lang/Long;>;",
-                    Opcodes.ARETURN, "query", "params");
-
-            // deleteAll
-            generateMethod("deleteAll",
-                    "()Ljava/util/concurrent/CompletionStage;",
-                    "()Ljava/util/concurrent/CompletionStage<Ljava/lang/Long;>;",
-                    Opcodes.ARETURN);
-
-            // delete
-            generateMethod("delete",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage;",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/concurrent/CompletionStage<Ljava/lang/Long;>;",
-                    Opcodes.ARETURN, "query", "params");
+            
+            for (MethodInfo method : panacheRxRepositoryBaseClassInfo.methods()) {
+                if(method.hasAnnotation(JandexUtil.DOTNAME_GENERATE_BRIDGE))
+                    generateMethod(method);
+            }
 
             super.visitEnd();
 
         }
 
-        private void generateMethod(String name, String descriptor, String signature, int returnOpCode, String... params) {
+        private void generateMethod(MethodInfo method) {
+            String descriptor = JandexUtil.getDescriptor(method, name -> name.equals("Entity") ? entitySignature : null);
+            String signature = JandexUtil.getSignature(method, name -> name.equals("Entity") ? entitySignature : null);
+            List<Type> parameters = method.parameters();
+
             MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                    name,
+                    method.name(),
                     descriptor,
                     signature,
                     null);
-            for (int i = 0; i < params.length; i++) {
-                mv.visitParameter(params[i], 0 /* modifiers */);
+            for (int i = 0; i < parameters.size(); i++) {
+                mv.visitParameter(method.parameterName(i), 0 /* modifiers */);
             }
             mv.visitCode();
             // inject model
             mv.visitFieldInsn(Opcodes.GETSTATIC, rxModelInfoType, RX_MODEL_FIELD_NAME, rxModelInfoDesc);
-            for (int i = 0; i < params.length; i++) {
+            for (int i = 0; i < parameters.size(); i++) {
                 mv.visitIntInsn(Opcodes.ALOAD, i + 1);
             }
             // inject model
             String forwardingDescriptor = "(" + RX_MODEL_INFO_SIGNATURE + descriptor.substring(1);
             mv.visitMethodInsn(Opcodes.INVOKESTATIC,
                     RX_OPERATIONS_BINARY_NAME,
-                    name,
+                    method.name(),
                     forwardingDescriptor, false);
-            mv.visitInsn(returnOpCode);
+            mv.visitInsn(Opcodes.ARETURN);
             mv.visitMaxs(0, 0);
             mv.visitEnd();
 
