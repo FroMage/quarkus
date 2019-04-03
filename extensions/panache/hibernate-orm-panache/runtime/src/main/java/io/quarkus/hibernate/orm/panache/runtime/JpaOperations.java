@@ -182,28 +182,26 @@ public class JpaOperations {
         return find(entityClass, query, null, params);
     }
 
-    @SuppressWarnings("rawtypes")
     public static PanacheQuery<?> find(Class<?> entityClass, String query, Sort sort, Object... params) {
         String findQuery = createFindQuery(entityClass, query, paramCount(params));
         EntityManager em = getEntityManager();
         // FIXME: check for duplicate ORDER BY clause?
         Query jpaQuery = em.createQuery(sort != null ? findQuery + sort.toOrderBy() : findQuery);
         bindParameters(jpaQuery, params);
-        return new PanacheQueryImpl(em, jpaQuery, findQuery, params);
+        return new PanacheQueryImpl<>(em, jpaQuery, findQuery, params);
     }
 
     public static PanacheQuery<?> find(Class<?> entityClass, String query, Map<String, Object> params) {
         return find(entityClass, query, null, params);
     }
 
-    @SuppressWarnings("rawtypes")
     public static PanacheQuery<?> find(Class<?> entityClass, String query, Sort sort, Map<String, Object> params) {
         String findQuery = createFindQuery(entityClass, query, paramCount(params));
         EntityManager em = getEntityManager();
         // FIXME: check for duplicate ORDER BY clause?
         Query jpaQuery = em.createQuery(sort != null ? findQuery + sort.toOrderBy() : findQuery);
         bindParameters(jpaQuery, params);
-        return new PanacheQueryImpl(em, jpaQuery, findQuery, params);
+        return new PanacheQueryImpl<>(em, jpaQuery, findQuery, params);
     }
 
     public static PanacheQuery<?> find(Class<?> entityClass, String query, Parameters params) {
@@ -334,6 +332,7 @@ public class JpaOperations {
                 "This method is normally automatically overridden in subclasses: did you forget to annotate your entity with @Entity?");
     }
 
+    // FIXME: int or long, but like delete
     public static int executeUpdate(String query, Object... params) {
         Query jpaQuery = getEntityManager().createQuery(query);
         bindParameters(jpaQuery, params);
