@@ -98,10 +98,11 @@ public class PanacheQueryImpl<Entity> implements PanacheQuery<Entity> {
         if (count == null) {
             // FIXME: this is crude but good enough for a first version
             String lcQuery = query.toLowerCase();
+            String countQueryHql = query;
             int orderByIndex = lcQuery.lastIndexOf(" order by ");
             if (orderByIndex != -1)
-                query = query.substring(0, orderByIndex);
-            Query countQuery = em.createQuery("SELECT COUNT(*) " + query);
+                countQueryHql = query.substring(0, orderByIndex);
+            Query countQuery = em.createQuery("SELECT COUNT(*) " + countQueryHql);
             if (paramsArrayOrMap instanceof Map)
                 JpaOperations.bindParameters(countQuery, (Map<String, Object>) paramsArrayOrMap);
             else
