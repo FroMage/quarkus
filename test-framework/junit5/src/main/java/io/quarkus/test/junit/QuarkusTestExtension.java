@@ -243,9 +243,9 @@ public class QuarkusTestExtension
             @Override
             public void close() throws IOException {
                 runtimeRunner.close();
-                //                while (!shutdownTasks.isEmpty()) {
-                //                    shutdownTasks.pop().run();
-                //                }
+                while (!shutdownTasks.isEmpty()) {
+                    shutdownTasks.pop().run();
+                }
             }
         };
 
