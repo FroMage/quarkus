@@ -120,8 +120,12 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
             String countQueryHql = findQuery;
             int orderByIndex = lcQuery.lastIndexOf(" order by ");
             if (orderByIndex != -1)
-                countQueryHql = findQuery.substring(0, orderByIndex);
-            count = pool.preparedQuery("SELECT COUNT(*) " + countQueryHql, params)
+                countQueryHql = countQueryHql.substring(0, orderByIndex);
+            if(lcQuery.startsWith("select * "))
+                countQueryHql = countQueryHql.substring(9);
+            String countQuery = "SELECT COUNT(*) " + countQueryHql;
+            System.err.println("count query: "+countQuery);
+            count = pool.preparedQuery(countQuery, params)
                     .thenApply(pgRowSet -> pgRowSet.iterator().next().getLong(0));
         }
         return count;
