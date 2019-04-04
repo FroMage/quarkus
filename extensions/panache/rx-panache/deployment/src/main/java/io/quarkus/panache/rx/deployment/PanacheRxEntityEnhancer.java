@@ -190,36 +190,6 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             mv.visitEnd();
         }
 
-//        private void generateMethod(String name,
-//                String descriptor,
-//                String signature,
-//                int returnOperation,
-//                String... parameters) {
-//            MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
-//                    name,
-//                    descriptor,
-//                    signature,
-//                    null);
-//            for (int i = 0; i < parameters.length; i++) {
-//                mv.visitParameter(parameters[i], 0 /* modifiers */);
-//            }
-//            mv.visitCode();
-//            // inject model
-//            mv.visitFieldInsn(Opcodes.GETSTATIC, modelBinaryName, RX_MODEL_FIELD_NAME, modelDesc);
-//            for (int i = 0; i < parameters.length; i++) {
-//                mv.visitIntInsn(Opcodes.ALOAD, i);
-//            }
-//            // inject model
-//            String forwardingDescriptor = "(" + RX_MODEL_INFO_SIGNATURE + descriptor.substring(1);
-//            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-//                    RX_OPERATIONS_BINARY_NAME,
-//                    name,
-//                    forwardingDescriptor, false);
-//            mv.visitInsn(returnOperation);
-//            mv.visitMaxs(0, 0);
-//            mv.visitEnd();
-//        }
-
         private void generateAccessors() {
             if (fields == null)
                 return;
