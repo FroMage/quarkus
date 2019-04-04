@@ -93,7 +93,8 @@ public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<?>> {
     }
 
     @GenerateBridge
-    public static <T extends PanacheRxEntityBase<?>> PanacheRxQuery<T> find(String query, Sort sort, Map<String, Object> params) {
+    public static <T extends PanacheRxEntityBase<?>> PanacheRxQuery<T> find(String query, Sort sort,
+            Map<String, Object> params) {
         throw RxOperations.implementationInjectionMissing();
     }
 
@@ -175,7 +176,8 @@ public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<?>> {
     }
 
     @GenerateBridge
-    public static <T extends PanacheRxEntityBase<?>> CompletionStage<List<T>> list(String query, Sort sort, Map<String, Object> params) {
+    public static <T extends PanacheRxEntityBase<?>> CompletionStage<List<T>> list(String query, Sort sort,
+            Map<String, Object> params) {
         throw RxOperations.implementationInjectionMissing();
     }
 

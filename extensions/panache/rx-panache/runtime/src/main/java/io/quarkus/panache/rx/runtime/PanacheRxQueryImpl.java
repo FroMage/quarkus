@@ -121,10 +121,10 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
             int orderByIndex = lcQuery.lastIndexOf(" order by ");
             if (orderByIndex != -1)
                 countQueryHql = countQueryHql.substring(0, orderByIndex);
-            if(lcQuery.startsWith("select * "))
+            if (lcQuery.startsWith("select * "))
                 countQueryHql = countQueryHql.substring(9);
             String countQuery = "SELECT COUNT(*) " + countQueryHql;
-            System.err.println("count query: "+countQuery);
+            System.err.println("count query: " + countQuery);
             count = pool.preparedQuery(countQuery, params)
                     .thenApply(pgRowSet -> pgRowSet.iterator().next().getLong(0));
         }
@@ -136,7 +136,8 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
                 .map(coreRow -> coreRowToEntity(modelInfo, coreRow)).buildRs();
     }
 
-    private <T extends Entity> CompletionStage<List<T>> queryToEntityList(RxModelInfo<T> modelInfo, CompletionStage<PgRowSet> rows) {
+    private <T extends Entity> CompletionStage<List<T>> queryToEntityList(RxModelInfo<T> modelInfo,
+            CompletionStage<PgRowSet> rows) {
         return rows.thenApply(rowset -> {
             List<T> ret = new ArrayList<>(rowset.size());
             for (io.reactiverse.pgclient.Row coreRow : rowset.getDelegate()) {

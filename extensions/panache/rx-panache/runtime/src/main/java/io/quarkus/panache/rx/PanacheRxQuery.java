@@ -146,7 +146,7 @@ public interface PanacheRxQuery<Entity> {
      * @see #page(Page)
      * @see #page()
      */
-//    public <T extends Entity> CompletionStage<Stream<T>> stream();
+    //    public <T extends Entity> CompletionStage<Stream<T>> stream();
     public <T extends Entity> Publisher<T> stream();
 
     /**
