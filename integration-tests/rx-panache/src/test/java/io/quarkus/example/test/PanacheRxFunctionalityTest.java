@@ -33,7 +33,7 @@ public class PanacheRxFunctionalityTest {
 
     @Test
     public void testPanacheFunctionality() throws Exception {
-        RestAssured.when().get("/test/rx-model-dao").then().body(is("OK"));
+        RestAssured.when().get("/test/rx-model-repository").then().body(is("OK"));
         RestAssured.when().get("/test/rx-model").then().body(is("OK"));
     }
 }
