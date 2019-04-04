@@ -279,8 +279,9 @@ public class PanacheRxModelInfoGenerator {
                 AssignableResultHandle enumValue = creator.createVariable(field.typeDescriptor);
                 BranchResult nullCheck = creator.ifNull(fieldValue);
                 nullCheck.trueBranch().assign(enumValue, nullCheck.trueBranch().loadNull());
-                nullCheck.falseBranch().assign(enumValue, 
-                                               nullCheck.falseBranch().invokeVirtualMethod(MethodDescriptor.ofMethod(Enum.class, "ordinal", int.class), fieldValue));
+                nullCheck.falseBranch().assign(enumValue,
+                        nullCheck.falseBranch().invokeVirtualMethod(MethodDescriptor.ofMethod(Enum.class, "ordinal", int.class),
+                                fieldValue));
                 fieldValue = enumValue;
             }
             creator.invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class), myTuple,

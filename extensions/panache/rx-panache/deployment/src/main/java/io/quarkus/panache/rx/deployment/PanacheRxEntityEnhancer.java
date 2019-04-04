@@ -50,7 +50,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
     private static final DotName DOTNAME_TRANSIENT = DotName.createSimple(Transient.class.getName());
     private static final DotName DOTNAME_MANY_TO_ONE = DotName.createSimple(ManyToOne.class.getName());
     private static final DotName DOTNAME_ONE_TO_MANY = DotName.createSimple(OneToMany.class.getName());
-    
+
     final Map<String, EntityModel> entities = new HashMap<>();
     private IndexView index;
     private ClassInfo panacheRxEntityBaseClassInfo;
@@ -150,7 +150,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             mv.visitEnd();
 
             for (MethodInfo method : panacheRxEntityBaseClassInfo.methods()) {
-                if(method.hasAnnotation(JandexUtil.DOTNAME_GENERATE_BRIDGE))
+                if (method.hasAnnotation(JandexUtil.DOTNAME_GENERATE_BRIDGE))
                     generateMethod(method);
             }
 
@@ -164,12 +164,12 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             String descriptor = JandexUtil.getDescriptor(method, name -> null);
             String signature = JandexUtil.getSignature(method, name -> null);
             List<Type> parameters = method.parameters();
-            
+
             MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
-                                                 method.name(),
-                                                 descriptor,
-                                                 signature,
-                                                 null);
+                    method.name(),
+                    descriptor,
+                    signature,
+                    null);
             for (int i = 0; i < parameters.size(); i++) {
                 mv.visitParameter(method.parameterName(i), 0 /* modifiers */);
             }
@@ -182,9 +182,9 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             // inject model
             String forwardingDescriptor = "(" + RX_MODEL_INFO_SIGNATURE + descriptor.substring(1);
             mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                               RX_OPERATIONS_BINARY_NAME,
-                               method.name(),
-                               forwardingDescriptor, false);
+                    RX_OPERATIONS_BINARY_NAME,
+                    method.name(),
+                    forwardingDescriptor, false);
             mv.visitInsn(Opcodes.ARETURN);
             mv.visitMaxs(0, 0);
             mv.visitEnd();

@@ -28,14 +28,13 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
     public final static String PANACHE_RX_REPOSITORY_NAME = PanacheRxRepository.class.getName();
     public final static String PANACHE_RX_REPOSITORY_BINARY_NAME = PANACHE_RX_REPOSITORY_NAME.replace('.', '/');
     public final static String PANACHE_RX_REPOSITORY_SIGNATURE = "L" + PANACHE_RX_REPOSITORY_BINARY_NAME + ";";
-    
+
     private ClassInfo panacheRxRepositoryBaseClassInfo;
 
-    
     public PanacheRxRepositoryEnhancer(IndexView index) {
         panacheRxRepositoryBaseClassInfo = index.getClassByName(PanacheRxResourceProcessor.DOTNAME_PANACHE_RX_REPOSITORY_BASE);
     }
-    
+
     @Override
     public ClassVisitor apply(String className, ClassVisitor outputClassVisitor) {
         return new RxDaoEnhancingClassVisitor(className, outputClassVisitor, panacheRxRepositoryBaseClassInfo);
@@ -49,7 +48,8 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
         private ClassInfo panacheRxRepositoryBaseClassInfo;
         private String entitySignature;
 
-        public RxDaoEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor, ClassInfo panacheRxRepositoryBaseClassInfo) {
+        public RxDaoEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor,
+                ClassInfo panacheRxRepositoryBaseClassInfo) {
             super(Opcodes.ASM6, outputClassVisitor);
             this.panacheRxRepositoryBaseClassInfo = panacheRxRepositoryBaseClassInfo;
         }
@@ -79,9 +79,9 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
 
         @Override
         public void visitEnd() {
-            
+
             for (MethodInfo method : panacheRxRepositoryBaseClassInfo.methods()) {
-                if(method.hasAnnotation(JandexUtil.DOTNAME_GENERATE_BRIDGE))
+                if (method.hasAnnotation(JandexUtil.DOTNAME_GENERATE_BRIDGE))
                     generateMethod(method);
             }
 

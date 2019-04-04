@@ -53,7 +53,9 @@ public class RxOperations {
     public static <T extends PanacheRxEntityBase<?>> CompletionStage<Void> delete(T entity) {
         PgPool pool = getPgPool();
         // FIXME: id column from model info
-        return pool.preparedQuery("DELETE FROM " + entity.getModelInfo().getTableName() + " WHERE id = $1", Tuple.of(entity._getId()))
+        return pool
+                .preparedQuery("DELETE FROM " + entity.getModelInfo().getTableName() + " WHERE id = $1",
+                        Tuple.of(entity._getId()))
                 // ignoreElement
                 .thenApply(rowset -> null);
     }
@@ -70,7 +72,7 @@ public class RxOperations {
 
     // Used by generated model
     public static <T, R> CompletionStage<R> zipArray(Function<? super Object[], ? extends R> zipper,
-                                                     @SuppressWarnings("unchecked") CompletionStage<? extends T>... sources) {
+            @SuppressWarnings("unchecked") CompletionStage<? extends T>... sources) {
         Object[] results = new Object[sources.length];
         CompletionStage<?> state = CompletableFuture.completedFuture(null);
         for (int i = 0; i < sources.length; i++) {
@@ -193,11 +195,12 @@ public class RxOperations {
     public static CompletionStage<?> findById(RxModelInfo<?> modelInfo, Object id) {
         PgPool pool = getPgPool();
         // FIXME: field list and id column name from model info
-        return pool.preparedQuery("SELECT * FROM " + modelInfo.getTableName() + " WHERE id = $1", Tuple.of(id)).thenApply(rowset -> {
-            if (rowset.size() == 1)
-                return modelInfo.fromRow(rowset.iterator().next());
-            return null;
-        });
+        return pool.preparedQuery("SELECT * FROM " + modelInfo.getTableName() + " WHERE id = $1", Tuple.of(id))
+                .thenApply(rowset -> {
+                    if (rowset.size() == 1)
+                        return modelInfo.fromRow(rowset.iterator().next());
+                    return null;
+                });
     }
 
     public static PanacheRxQuery<?> find(RxModelInfo<?> modelInfo, String query, Object... params) {
@@ -232,14 +235,14 @@ public class RxOperations {
     }
 
     private static String translateNamedQuery(String query, Map<String, Object> params, Tuple tuple) {
-        System.err.println("Start query: "+query);
+        System.err.println("Start query: " + query);
         for (Entry<String, Object> entry : params.entrySet()) {
             tuple.addValue(entry.getValue());
             // replace :foo -> $1
-            System.err.println("Replacing :"+entry.getKey()+" with $"+tuple.size());
-            query = query.replaceAll(":\\Q"+entry.getKey()+"\\E", "\\$"+tuple.size());
+            System.err.println("Replacing :" + entry.getKey() + " with $" + tuple.size());
+            query = query.replaceAll(":\\Q" + entry.getKey() + "\\E", "\\$" + tuple.size());
         }
-        System.err.println("End query: "+query);
+        System.err.println("End query: " + query);
         return query;
     }
 
@@ -253,32 +256,32 @@ public class RxOperations {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<List<?>> list(RxModelInfo<?> modelInfo, String query, Object... params) {
-        return (CompletionStage)find(modelInfo, query, params).list();
+        return (CompletionStage) find(modelInfo, query, params).list();
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<List<?>> list(RxModelInfo<?> modelInfo, String query, Sort sort, Object... params) {
-        return (CompletionStage)find(modelInfo, query, sort, params).list();
+        return (CompletionStage) find(modelInfo, query, sort, params).list();
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<List<?>> list(RxModelInfo<?> modelInfo, String query, Map<String, Object> params) {
-        return (CompletionStage)find(modelInfo, query, params).list();
+        return (CompletionStage) find(modelInfo, query, params).list();
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<List<?>> list(RxModelInfo<?> modelInfo, String query, Sort sort, Map<String, Object> params) {
-        return (CompletionStage)find(modelInfo, query, sort, params).list();
+        return (CompletionStage) find(modelInfo, query, sort, params).list();
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<List<?>> list(RxModelInfo<?> modelInfo, String query, Parameters params) {
-        return (CompletionStage)find(modelInfo, query, params).list();
+        return (CompletionStage) find(modelInfo, query, params).list();
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<List<?>> list(RxModelInfo<?> modelInfo, String query, Sort sort, Parameters params) {
-        return (CompletionStage)find(modelInfo, query, sort, params).list();
+        return (CompletionStage) find(modelInfo, query, sort, params).list();
     }
 
     public static Publisher<?> stream(RxModelInfo<?> modelInfo, String query, Object... params) {
@@ -320,12 +323,12 @@ public class RxOperations {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<List<?>> listAll(RxModelInfo<?> modelInfo) {
-        return (CompletionStage)findAll(modelInfo).list();
+        return (CompletionStage) findAll(modelInfo).list();
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<List<?>> listAll(RxModelInfo<?> modelInfo, Sort sort) {
-        return (CompletionStage)findAll(modelInfo, sort).list();
+        return (CompletionStage) findAll(modelInfo, sort).list();
     }
 
     public static Publisher<?> streamAll(RxModelInfo<?> modelInfo) {
@@ -338,7 +341,8 @@ public class RxOperations {
 
     public static CompletionStage<Long> count(RxModelInfo<?> modelInfo) {
         PgPool pool = getPgPool();
-        return pool.query("SELECT COUNT(*) FROM " + modelInfo.getTableName()).thenApply(rowset -> rowset.iterator().next().getLong(0));
+        return pool.query("SELECT COUNT(*) FROM " + modelInfo.getTableName())
+                .thenApply(rowset -> rowset.iterator().next().getLong(0));
     }
 
     public static CompletionStage<Long> count(RxModelInfo<?> modelInfo, String query, Object... params) {
@@ -349,7 +353,7 @@ public class RxOperations {
                 .thenApply(rowset -> rowset.iterator().next().getLong(0));
     }
 
-    public static CompletionStage<Long> count(RxModelInfo<?> modelInfo, String query, Map<String,Object> params) {
+    public static CompletionStage<Long> count(RxModelInfo<?> modelInfo, String query, Map<String, Object> params) {
         PgPool pool = getPgPool();
         Tuple tuple = Tuple.tuple();
         String countQuery = createCountQuery(modelInfo, query, paramCount(params));
@@ -375,7 +379,7 @@ public class RxOperations {
                 .thenApply(rowset -> (long) rowset.rowCount());
     }
 
-    public static CompletionStage<Long> delete(RxModelInfo<?> modelInfo, String query, Map<String,Object> params) {
+    public static CompletionStage<Long> delete(RxModelInfo<?> modelInfo, String query, Map<String, Object> params) {
         PgPool pool = getPgPool();
         String deleteQuery = createDeleteQuery(modelInfo, query, paramCount(params));
         Tuple tuple = Tuple.tuple();
@@ -406,9 +410,9 @@ public class RxOperations {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<Void> save(Stream<? extends PanacheRxEntityBase<?>> entities) {
-        return entities.reduce((CompletionStage)CompletableFuture.completedFuture(null), 
-                               (ret, entity) -> entity.save(), 
-                               (c1, c2) -> c1.thenCompose(v -> c2))
+        return entities.reduce((CompletionStage) CompletableFuture.completedFuture(null),
+                (ret, entity) -> entity.save(),
+                (c1, c2) -> c1.thenCompose(v -> c2))
                 .thenApply(v -> null);
     }
 
@@ -416,12 +420,12 @@ public class RxOperations {
         return new IllegalStateException(
                 "This method is normally automatically overridden in subclasses: did you forget to annotate your entity with @Entity?");
     }
-    
+
     public static CompletionStage<Long> executeUpdate(String query, Object... params) {
         PgPool pool = getPgPool();
         query = translateOrderedQuery(query);
         return pool.preparedQuery(query, bindParameters(params))
-                .thenApply(rowset -> (long)rowset.rowCount());
+                .thenApply(rowset -> (long) rowset.rowCount());
     }
 
     public static CompletionStage<Long> executeUpdate(String query, Map<String, Object> params) {
@@ -429,7 +433,7 @@ public class RxOperations {
         Tuple tuple = Tuple.tuple();
         query = translateNamedQuery(query, params, tuple);
         return pool.preparedQuery(query, tuple)
-                .thenApply(rowset -> (long)rowset.rowCount());
+                .thenApply(rowset -> (long) rowset.rowCount());
     }
 
 }

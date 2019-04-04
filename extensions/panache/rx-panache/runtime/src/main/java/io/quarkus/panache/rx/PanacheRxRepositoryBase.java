@@ -23,9 +23,9 @@ import io.quarkus.panache.rx.runtime.RxOperations;
  *
  * @author Stéphane Épardaud
  * @param <Entity>
- *            The type of entity to operate on
+ *        The type of entity to operate on
  * @param <Id>
- *            The ID type of the entity
+ *        The ID type of the entity
  */
 public interface PanacheRxRepositoryBase<Entity extends PanacheRxEntityBase<Entity>, Id> {
 
