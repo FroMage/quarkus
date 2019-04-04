@@ -276,8 +276,12 @@ public class PanacheRxModelInfoGenerator {
             }
             if (field.isEnum) {
                 // FIXME: handle NPE
-                fieldValue = creator.invokeVirtualMethod(MethodDescriptor.ofMethod(Enum.class, "ordinal", int.class),
-                        fieldValue);
+                AssignableResultHandle enumValue = creator.createVariable(field.typeDescriptor);
+                BranchResult nullCheck = creator.ifNull(fieldValue);
+                nullCheck.trueBranch().assign(enumValue, nullCheck.trueBranch().loadNull());
+                nullCheck.falseBranch().assign(enumValue, 
+                                               nullCheck.falseBranch().invokeVirtualMethod(MethodDescriptor.ofMethod(Enum.class, "ordinal", int.class), fieldValue));
+                fieldValue = enumValue;
             }
             creator.invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class), myTuple,
                     fieldValue);
