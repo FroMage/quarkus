@@ -86,7 +86,6 @@ public class PanacheRxRepositoryEnhancer implements BiFunction<String, ClassVisi
             }
 
             super.visitEnd();
-
         }
 
         private void generateMethod(MethodInfo method) {
