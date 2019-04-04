@@ -2,6 +2,7 @@ package io.quarkus.panache.rx.runtime;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -105,13 +106,6 @@ public class RxOperations {
         return t;
     }
 
-    public static Tuple bindParameters(Map<String, Object> params) {
-        if (params == null || params.size() == 0)
-            return Tuple.tuple();
-        // FIXME: turn named params into ordered params
-        return Tuple.tuple();
-    }
-
     private static int paramCount(Object[] params) {
         return params != null ? params.length : 0;
     }
@@ -134,24 +128,19 @@ public class RxOperations {
             return "SELECT * FROM " + getEntityName(modelInfo);
 
         String trimmedLc = trimmed.toLowerCase();
-        String translatedQuery = translateQuery(query);
         if (trimmedLc.startsWith("from ")) {
-            return "SELECT * " + translatedQuery;
+            return "SELECT * " + query;
         }
         if (trimmedLc.startsWith("select ")) {
             throw new IllegalArgumentException("Select queries not yet supported");
         }
         if (trimmedLc.startsWith("order by ")) {
-            return "SELECT * FROM " + getEntityName(modelInfo) + " " + translatedQuery;
+            return "SELECT * FROM " + getEntityName(modelInfo) + " " + query;
         }
         if (trimmedLc.indexOf(' ') == -1 && trimmedLc.indexOf('=') == -1 && paramCount == 1) {
-            translatedQuery += " = $1";
+            query += " = $1";
         }
-        return "SELECT * FROM " + getEntityName(modelInfo) + " WHERE " + translatedQuery;
-    }
-
-    private static String translateQuery(String query) {
-        return query.replaceAll("\\?(\\d+)", "\\$$1");
+        return "SELECT * FROM " + getEntityName(modelInfo) + " WHERE " + query;
     }
 
     private static String createCountQuery(RxModelInfo<?> modelInfo, String query, int paramCount) {
@@ -163,18 +152,17 @@ public class RxOperations {
             return "SELECT COUNT(*) FROM " + getEntityName(modelInfo);
 
         String trimmedLc = trimmed.toLowerCase();
-        String translatedQuery = translateQuery(query);
         if (trimmedLc.startsWith("from ")) {
-            return "SELECT COUNT(*) " + translatedQuery;
+            return "SELECT COUNT(*) " + query;
         }
         if (trimmedLc.startsWith("order by ")) {
             // ignore it
             return "SELECT COUNT(*) FROM " + getEntityName(modelInfo);
         }
         if (trimmedLc.indexOf(' ') == -1 && trimmedLc.indexOf('=') == -1 && paramCount == 1) {
-            translatedQuery += " = $1";
+            query += " = $1";
         }
-        return "SELECT COUNT(*) FROM " + getEntityName(modelInfo) + " WHERE " + translatedQuery;
+        return "SELECT COUNT(*) FROM " + getEntityName(modelInfo) + " WHERE " + query;
     }
 
     private static String createDeleteQuery(RxModelInfo<?> modelInfo, String query, int paramCount) {
@@ -186,18 +174,17 @@ public class RxOperations {
             return "DELETE FROM " + getEntityName(modelInfo);
 
         String trimmedLc = trimmed.toLowerCase();
-        String translatedQuery = translateQuery(query);
         if (trimmedLc.startsWith("from ")) {
-            return "DELETE " + translatedQuery;
+            return "DELETE " + query;
         }
         if (trimmedLc.startsWith("order by ")) {
             // ignore it
             return "DELETE FROM " + getEntityName(modelInfo);
         }
         if (trimmedLc.indexOf(' ') == -1 && trimmedLc.indexOf('=') == -1 && paramCount == 1) {
-            translatedQuery += " = $1";
+            query += " = $1";
         }
-        return "DELETE FROM " + getEntityName(modelInfo) + " WHERE " + translatedQuery;
+        return "DELETE FROM " + getEntityName(modelInfo) + " WHERE " + query;
     }
 
     //
@@ -217,8 +204,12 @@ public class RxOperations {
         return find(modelInfo, query, null, params);
     }
 
+    private static String translateOrderedQuery(String query) {
+        return query.replaceAll("\\?(\\d+)", "\\$$1");
+    }
+
     public static PanacheRxQuery<?> find(RxModelInfo<?> modelInfo, String query, Sort sort, Object... params) {
-        String findQuery = createFindQuery(modelInfo, query, paramCount(params));
+        String findQuery = translateOrderedQuery(createFindQuery(modelInfo, query, paramCount(params)));
         PgPool pool = getPgPool();
         // FIXME: check for duplicate ORDER BY clause?
         String sortedQuery = sort != null ? findQuery + sort.toOrderBy() : findQuery;
@@ -232,11 +223,24 @@ public class RxOperations {
 
     public static PanacheRxQuery<?> find(RxModelInfo<?> modelInfo, String query, Sort sort, Map<String, Object> params) {
         String findQuery = createFindQuery(modelInfo, query, paramCount(params));
+        Tuple tuple = Tuple.tuple();
+        findQuery = translateNamedQuery(findQuery, params, tuple);
         PgPool pool = getPgPool();
         // FIXME: check for duplicate ORDER BY clause?
         String sortedQuery = sort != null ? findQuery + sort.toOrderBy() : findQuery;
-        Tuple tuple = bindParameters(params);
         return new PanacheRxQueryImpl<>(pool, modelInfo, findQuery, sortedQuery, tuple);
+    }
+
+    private static String translateNamedQuery(String query, Map<String, Object> params, Tuple tuple) {
+        System.err.println("Start query: "+query);
+        for (Entry<String, Object> entry : params.entrySet()) {
+            tuple.addValue(entry.getValue());
+            // replace :foo -> $1
+            System.err.println("Replacing :"+entry.getKey()+" with $"+tuple.size());
+            query = query.replaceAll(":\\Q"+entry.getKey()+"\\E", "\\$"+tuple.size());
+        }
+        System.err.println("End query: "+query);
+        return query;
     }
 
     public static PanacheRxQuery<?> find(RxModelInfo<?> modelInfo, String query, Parameters params) {
@@ -339,13 +343,18 @@ public class RxOperations {
 
     public static CompletionStage<Long> count(RxModelInfo<?> modelInfo, String query, Object... params) {
         PgPool pool = getPgPool();
-        return pool.preparedQuery(createCountQuery(modelInfo, query, paramCount(params)), bindParameters(params))
+        String countQuery = createCountQuery(modelInfo, query, paramCount(params));
+        countQuery = translateOrderedQuery(countQuery);
+        return pool.preparedQuery(countQuery, bindParameters(params))
                 .thenApply(rowset -> rowset.iterator().next().getLong(0));
     }
 
     public static CompletionStage<Long> count(RxModelInfo<?> modelInfo, String query, Map<String,Object> params) {
         PgPool pool = getPgPool();
-        return pool.preparedQuery(createCountQuery(modelInfo, query, paramCount(params)), bindParameters(params))
+        Tuple tuple = Tuple.tuple();
+        String countQuery = createCountQuery(modelInfo, query, paramCount(params));
+        countQuery = translateNamedQuery(countQuery, params, tuple);
+        return pool.preparedQuery(countQuery, tuple)
                 .thenApply(rowset -> rowset.iterator().next().getLong(0));
     }
 
@@ -360,13 +369,18 @@ public class RxOperations {
 
     public static CompletionStage<Long> delete(RxModelInfo<?> modelInfo, String query, Object... params) {
         PgPool pool = getPgPool();
-        return pool.preparedQuery(createDeleteQuery(modelInfo, query, paramCount(params)), bindParameters(params))
+        String deleteQuery = createDeleteQuery(modelInfo, query, paramCount(params));
+        deleteQuery = translateOrderedQuery(deleteQuery);
+        return pool.preparedQuery(deleteQuery, bindParameters(params))
                 .thenApply(rowset -> (long) rowset.rowCount());
     }
 
     public static CompletionStage<Long> delete(RxModelInfo<?> modelInfo, String query, Map<String,Object> params) {
         PgPool pool = getPgPool();
-        return pool.preparedQuery(createDeleteQuery(modelInfo, query, paramCount(params)), bindParameters(params))
+        String deleteQuery = createDeleteQuery(modelInfo, query, paramCount(params));
+        Tuple tuple = Tuple.tuple();
+        deleteQuery = translateNamedQuery(deleteQuery, params, tuple);
+        return pool.preparedQuery(deleteQuery, tuple)
                 .thenApply(rowset -> (long) rowset.rowCount());
     }
 
@@ -405,13 +419,16 @@ public class RxOperations {
     
     public static CompletionStage<Long> executeUpdate(String query, Object... params) {
         PgPool pool = getPgPool();
+        query = translateOrderedQuery(query);
         return pool.preparedQuery(query, bindParameters(params))
                 .thenApply(rowset -> (long)rowset.rowCount());
     }
 
     public static CompletionStage<Long> executeUpdate(String query, Map<String, Object> params) {
         PgPool pool = getPgPool();
-        return pool.preparedQuery(query, bindParameters(params))
+        Tuple tuple = Tuple.tuple();
+        query = translateNamedQuery(query, params, tuple);
+        return pool.preparedQuery(query, tuple)
                 .thenApply(rowset -> (long)rowset.rowCount());
     }
 
