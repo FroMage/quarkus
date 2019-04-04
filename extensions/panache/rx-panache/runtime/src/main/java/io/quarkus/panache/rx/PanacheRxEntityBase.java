@@ -239,18 +239,15 @@ public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<?>> {
         throw RxOperations.implementationInjectionMissing();
     }
 
-    @GenerateBridge
     public static CompletionStage<Void> save(Iterable<? extends PanacheRxEntityBase<?>> entities) {
-        throw RxOperations.implementationInjectionMissing();
+        return RxOperations.save(entities);
     }
 
-    @GenerateBridge
     public static CompletionStage<Void> save(Stream<? extends PanacheRxEntityBase<?>> entities) {
-        throw RxOperations.implementationInjectionMissing();
+        return RxOperations.save(entities);
     }
 
-    @GenerateBridge
     public static CompletionStage<Void> save(PanacheRxEntityBase<?> firstEntity, PanacheRxEntityBase<?>... entities) {
-        throw RxOperations.implementationInjectionMissing();
+        return RxOperations.save(firstEntity, entities);
     }
 }
