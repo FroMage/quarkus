@@ -6,6 +6,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.reactivestreams.Publisher;
 
@@ -46,22 +47,6 @@ public class RxOperations {
             else
                 return pool.preparedQuery(modelInfo.updateStatement(), t).thenApply(rowset -> entity);
         });
-    }
-
-    public static CompletionStage<Void> save(Iterable<? extends PanacheRxEntityBase<?>> entities) {
-        CompletionStage<?> ret = CompletableFuture.completedFuture(null);
-        for (PanacheRxEntityBase<?> entity : entities) {
-            ret = ret.thenCompose(v -> entity.save());
-        }
-        return ret.thenApply(v -> null);
-    }
-
-    public static CompletionStage<Void> save(PanacheRxEntityBase<?> firstEntity, PanacheRxEntityBase<?>... entities) {
-        CompletionStage<?> ret = firstEntity.save();
-        for (PanacheRxEntityBase<?> entity : entities) {
-            ret = ret.thenCompose(v -> entity.save());
-        }
-        return ret.thenApply(v -> null);
     }
 
     public static <T extends PanacheRxEntityBase<?>> CompletionStage<Void> delete(T entity) {
@@ -388,7 +373,31 @@ public class RxOperations {
     public static CompletionStage<Long> delete(RxModelInfo<?> modelInfo, String query, Parameters params) {
         return delete(modelInfo, query, params.map());
     }
-    
+
+    public static CompletionStage<Void> save(Iterable<? extends PanacheRxEntityBase<?>> entities) {
+        CompletionStage<?> ret = CompletableFuture.completedFuture(null);
+        for (PanacheRxEntityBase<?> entity : entities) {
+            ret = ret.thenCompose(v -> entity.save());
+        }
+        return ret.thenApply(v -> null);
+    }
+
+    public static CompletionStage<Void> save(PanacheRxEntityBase<?> firstEntity, PanacheRxEntityBase<?>... entities) {
+        CompletionStage<?> ret = firstEntity.save();
+        for (PanacheRxEntityBase<?> entity : entities) {
+            ret = ret.thenCompose(v -> entity.save());
+        }
+        return ret.thenApply(v -> null);
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static CompletionStage<Void> save(Stream<? extends PanacheRxEntityBase<?>> entities) {
+        return entities.reduce((CompletionStage)CompletableFuture.completedFuture(null), 
+                               (ret, entity) -> entity.save(), 
+                               (c1, c2) -> c1.thenCompose(v -> c2))
+                .thenApply(v -> null);
+    }
+
     public static IllegalStateException implementationInjectionMissing() {
         return new IllegalStateException(
                 "This method is normally automatically overridden in subclasses: did you forget to annotate your entity with @Entity?");

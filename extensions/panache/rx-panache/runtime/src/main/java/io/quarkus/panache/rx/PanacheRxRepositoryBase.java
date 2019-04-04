@@ -209,18 +209,15 @@ public interface PanacheRxRepositoryBase<Entity extends PanacheRxEntityBase<Enti
         throw RxOperations.implementationInjectionMissing();
     }
 
-    @GenerateBridge
     public default CompletionStage<Void> save(Iterable<Entity> entities) {
-        throw RxOperations.implementationInjectionMissing();
+        return RxOperations.save(entities);
     }
 
-    @GenerateBridge
     public default CompletionStage<Void> save(Stream<Entity> entities) {
-        throw RxOperations.implementationInjectionMissing();
+        return RxOperations.save(entities);
     }
 
-    @GenerateBridge
     public default CompletionStage<Void> save(Entity firstEntity, @SuppressWarnings("unchecked") Entity... entities) {
-        throw RxOperations.implementationInjectionMissing();
+        return RxOperations.save(firstEntity, entities);
     }
 }
