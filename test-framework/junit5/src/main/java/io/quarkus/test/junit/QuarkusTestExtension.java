@@ -142,6 +142,18 @@ public class QuarkusTestExtension
                                 // First, check if the class has already been loaded
                                 Class<?> c = findLoadedClass(name);
                                 if (c == null) {
+                                    ClassLoader parent = getParent();
+                                    if (parent != null) {
+                                        try {
+                                            c = parent.loadClass(name);
+                                        } catch (ClassNotFoundException x) {
+                                            // ignore
+                                        }
+                                        if (c != null) {
+                                            System.err.println("Resolved " + name + " from parent CL");
+                                            return c;
+                                        }
+                                    }
                                     c = findClass(name);
                                 }
                                 if (resolve) {
