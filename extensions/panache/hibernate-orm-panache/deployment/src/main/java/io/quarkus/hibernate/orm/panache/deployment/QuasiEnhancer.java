@@ -1,5 +1,6 @@
 package io.quarkus.hibernate.orm.panache.deployment;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -28,7 +29,7 @@ public class QuasiEnhancer implements BiFunction<String, ClassVisitor, ClassVisi
         private QuasiInstrumentor instrumentor;
 
         public HibernateEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor) {
-            super(Opcodes.ASM6, new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS));
+            super(Opcodes.ASM6, new ClassWriter(0));
             this.className = className;
             this.outputClassVisitor = outputClassVisitor;
             instrumentor = new QuasiInstrumentor();
@@ -45,9 +46,12 @@ public class QuasiEnhancer implements BiFunction<String, ClassVisitor, ClassVisi
             //enhancement API:
             final byte[] inputBytes = writer.toByteArray();
             final byte[] transformedBytes = quasiEnhancement(className, inputBytes);
+            String classPath = className.replace('.', '/');
+            new File("before/" + classPath).mkdirs();
+            new File("after/" + classPath).mkdirs();
             try {
-                Files.write(Paths.get("before.class"), inputBytes);
-                Files.write(Paths.get("after.class"), transformedBytes);
+                Files.write(Paths.get("before/" + classPath + ".class"), inputBytes);
+                Files.write(Paths.get("after/" + classPath + ".class"), transformedBytes);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
