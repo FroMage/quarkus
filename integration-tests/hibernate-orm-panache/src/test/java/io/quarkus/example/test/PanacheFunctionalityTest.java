@@ -32,20 +32,25 @@ import io.restassured.RestAssured;
 @QuarkusTest
 public class PanacheFunctionalityTest {
 
-    @Test
-    public void testPanacheFunctionality() throws Exception {
-        RestAssured.when().get("/test/model-dao").then().body(is("OK"));
-        RestAssured.when().get("/test/model").then().body(is("OK"));
-        RestAssured.when().get("/test/accessors").then().body(is("OK"));
+    //    @Test
+    //    public void testPanacheFunctionality() throws Exception {
+    //        RestAssured.when().get("/test/model-dao").then().body(is("OK"));
+    //        RestAssured.when().get("/test/model").then().body(is("OK"));
+    //        RestAssured.when().get("/test/accessors").then().body(is("OK"));
+    //
+    //        RestAssured.when().get("/test/model1").then().body(is("OK"));
+    //        RestAssured.when().get("/test/model2").then().body(is("OK"));
+    //        RestAssured.when().get("/test/model3").then().body(is("OK"));
+    //    }
+    //
+    //    @DisabledOnSubstrate
+    //    @Test
+    //    public void testPanacheInTest() {
+    //        Assertions.assertEquals(0, Person.count());
+    //    }
 
-        RestAssured.when().get("/test/model1").then().body(is("OK"));
-        RestAssured.when().get("/test/model2").then().body(is("OK"));
-        RestAssured.when().get("/test/model3").then().body(is("OK"));
-    }
-
-    @DisabledOnSubstrate
     @Test
-    public void testPanacheInTest() {
-        Assertions.assertEquals(0, Person.count());
+    public void testAsync() {
+        RestAssured.when().get("/test/async").then().body(is("Hello Stef"));
     }
 }
