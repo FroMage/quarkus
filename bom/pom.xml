@@ -151,6 +151,8 @@
         <flyway.version>5.2.4</flyway.version>
         <yasson.version>1.0.3</yasson.version>
         <ea-async.version>1.2.2</ea-async.version>
+        <quasi.version>0.7.10</quasi.version>
+        <latency-utils.version>2.0.3</latency-utils.version>
     </properties>
 
     <dependencyManagement>
@@ -1723,6 +1725,22 @@
                 <groupId>com.ea.async</groupId>
                 <artifactId>ea-async</artifactId>
                 <version>${ea-async.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.fromage.quasi</groupId>
+                <artifactId>quasi-core</artifactId>
+                <version>${quasi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.latencyutils</groupId>
+                <artifactId>LatencyUtils</artifactId>
+                <version>${latency-utils.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.hdrhistogram</groupId>
+                        <artifactId>HdrHistogram</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
         </dependencies>
     </dependencyManagement>

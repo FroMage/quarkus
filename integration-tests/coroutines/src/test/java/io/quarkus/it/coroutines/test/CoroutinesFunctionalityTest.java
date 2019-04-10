@@ -31,6 +31,11 @@ public class CoroutinesFunctionalityTest {
 
     @Test
     public void testEaAsync() {
-        RestAssured.when().get("/test/ea-async").then().body(is("Hello Stef"));
+        RestAssured.when().get("/test-ea-async/async").then().body(is("Hello Stef"));
+    }
+
+    @Test
+    public void testQuasar() {
+        RestAssured.when().get("/test-quasar/async").then().body(is("Hello Stef"));
     }
 }

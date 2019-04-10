@@ -29,8 +29,8 @@ import io.quarkus.coroutines.eaasync.Suspendable;
 /**
  * Various tests covering Coroutines functionality. All tests should work in both standard JVM and SubstrateVM.
  */
-@Path("test")
-public class TestEndpoint {
+@Path("test-ea-async")
+public class TestEndpointEaAsync {
 
     @Suspendable
     @Path("async")
