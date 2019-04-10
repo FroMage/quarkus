@@ -69,6 +69,7 @@
 
 	<!-- Coroutines -->
 	<module>coroutines-ea-async</module>
+	<module>coroutines-quasar</module>
 
         <!-- Data access and validation -->
         <module>narayana-jta</module>
