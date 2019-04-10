@@ -38,16 +38,16 @@ public class EaAsyncEnhancer implements BiFunction<String, ClassVisitor, ClassVi
             //enhancement API:
             final byte[] inputBytes = writer.toByteArray();
             final byte[] transformedBytes = eaAsyncEnhancement(className, inputBytes);
-//            String classPath = className.replace('.', '/');
-//            new File("before/" + classPath).mkdirs();
-//            new File("after/" + classPath).mkdirs();
-//            try {
-//                Files.write(Paths.get("before/" + classPath + ".class"), inputBytes);
-//                Files.write(Paths.get("after/" + classPath + ".class"), transformedBytes);
-//            } catch (IOException e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//            }
+            //            String classPath = className.replace('.', '/');
+            //            new File("before/" + classPath).mkdirs();
+            //            new File("after/" + classPath).mkdirs();
+            //            try {
+            //                Files.write(Paths.get("before/" + classPath + ".class"), inputBytes);
+            //                Files.write(Paths.get("after/" + classPath + ".class"), transformedBytes);
+            //            } catch (IOException e) {
+            //                // TODO Auto-generated catch block
+            //                e.printStackTrace();
+            //            }
             //Then re-convert the transformed bytecode to not interrupt the visitor chain:
             ClassReader cr = new ClassReader(transformedBytes);
             cr.accept(outputClassVisitor, 0);
@@ -55,7 +55,8 @@ public class EaAsyncEnhancer implements BiFunction<String, ClassVisitor, ClassVi
 
         private byte[] eaAsyncEnhancement(final String className, final byte[] originalBytes) {
             byte[] enhanced;
-            enhanced = transformer.instrument(Thread.currentThread().getContextClassLoader(), new ByteArrayInputStream(originalBytes));
+            enhanced = transformer.instrument(Thread.currentThread().getContextClassLoader(),
+                    new ByteArrayInputStream(originalBytes));
             return enhanced == null ? originalBytes : enhanced;
         }
 
