@@ -1,5 +1,6 @@
 package io.quarkus.hibernate.orm.panache.deployment;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,11 +12,9 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
-import com.github.fromage.quasi.fibers.instrument.QuasiInstrumentor;
+import com.ea.async.instrumentation.Transformer;
 
-import io.quarkus.deployment.util.IoUtil;
-
-public class QuasiEnhancer implements BiFunction<String, ClassVisitor, ClassVisitor> {
+public class EaAsyncEnhancer implements BiFunction<String, ClassVisitor, ClassVisitor> {
 
     @Override
     public ClassVisitor apply(String className, ClassVisitor outputClassVisitor) {
@@ -26,16 +25,13 @@ public class QuasiEnhancer implements BiFunction<String, ClassVisitor, ClassVisi
 
         private final String className;
         private final ClassVisitor outputClassVisitor;
-        private QuasiInstrumentor instrumentor;
+        private Transformer transformer;
 
         public HibernateEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor) {
             super(Opcodes.ASM6, new ClassWriter(0));
             this.className = className;
             this.outputClassVisitor = outputClassVisitor;
-            instrumentor = new QuasiInstrumentor();
-            instrumentor.setCheck(true);
-            instrumentor.setDebug(true);
-            instrumentor.setVerbose(true);
+            transformer = new Transformer();
         }
 
         @Override
@@ -45,7 +41,7 @@ public class QuasiEnhancer implements BiFunction<String, ClassVisitor, ClassVisi
             //We need to convert the nice Visitor chain into a plain byte array to adapt to the Hibernate ORM
             //enhancement API:
             final byte[] inputBytes = writer.toByteArray();
-            final byte[] transformedBytes = quasiEnhancement(className, inputBytes);
+            final byte[] transformedBytes = eaAsyncEnhancement(className, inputBytes);
             String classPath = className.replace('.', '/');
             new File("before/" + classPath).mkdirs();
             new File("after/" + classPath).mkdirs();
@@ -61,17 +57,12 @@ public class QuasiEnhancer implements BiFunction<String, ClassVisitor, ClassVisi
             cr.accept(outputClassVisitor, 0);
         }
 
-        private byte[] quasiEnhancement(final String className, final byte[] originalBytes) {
+        private byte[] eaAsyncEnhancement(final String className, final byte[] originalBytes) {
             byte[] enhanced;
-            try {
-                System.err.println("Instrumenting " + className);
-                enhanced = instrumentor.instrumentClass(Thread.currentThread().getContextClassLoader(), className,
-                        originalBytes);
-                System.err.println("Instrumenting done " + className);
-                return enhanced == null ? originalBytes : enhanced;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            System.err.println("Instrumenting " + className);
+            enhanced = transformer.instrument(Thread.currentThread().getContextClassLoader(), new ByteArrayInputStream(originalBytes));
+            System.err.println("Instrumenting done " + className);
+            return enhanced == null ? originalBytes : enhanced;
         }
 
     }

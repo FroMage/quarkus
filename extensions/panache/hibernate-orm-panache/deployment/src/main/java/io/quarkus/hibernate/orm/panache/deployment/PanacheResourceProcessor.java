@@ -30,8 +30,6 @@ import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
 
-import com.github.fromage.quasi.fibers.Suspendable;
-
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -47,6 +45,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+import io.quarkus.hibernate.orm.panache.Suspendable;
 
 /**
  *
@@ -95,7 +94,7 @@ public final class PanacheResourceProcessor {
             BuildProducer<BytecodeTransformerBuildItem> transformers,
             HibernateEnhancersRegisteredBuildItem hibernateMarker) throws Exception {
 
-        QuasiEnhancer quasiEnhancer = new QuasiEnhancer();
+        EaAsyncEnhancer quasiEnhancer = new EaAsyncEnhancer();
         Set<String> quasiClasses = new HashSet<>();
         for (AnnotationInstance annotationInstance : index.getIndex().getAnnotations(DOTNAME_SUSPENDABLE)) {
             String quasiUserClassName = annotationInstance.target().asMethod().declaringClass().name().toString();
