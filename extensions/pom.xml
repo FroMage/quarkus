@@ -67,6 +67,9 @@
         <module>smallrye-reactive-messaging</module>
         <module>smallrye-reactive-messaging-kafka</module>
 
+	<!-- Coroutines -->
+	<module>coroutines-ea-async</module>
+
         <!-- Data access and validation -->
         <module>narayana-jta</module>
         <module>agroal</module>
