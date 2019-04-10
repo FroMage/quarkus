@@ -41,16 +41,16 @@ public class QuasarEnhancer implements BiFunction<String, ClassVisitor, ClassVis
             //enhancement API:
             final byte[] inputBytes = writer.toByteArray();
             final byte[] transformedBytes = quasiEnhancement(className, inputBytes);
-//            String classPath = className.replace('.', '/');
-//            new File("before/" + classPath).mkdirs();
-//            new File("after/" + classPath).mkdirs();
-//            try {
-//                Files.write(Paths.get("before/" + classPath + ".class"), inputBytes);
-//                Files.write(Paths.get("after/" + classPath + ".class"), transformedBytes);
-//            } catch (IOException e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//            }
+            //            String classPath = className.replace('.', '/');
+            //            new File("before/" + classPath).mkdirs();
+            //            new File("after/" + classPath).mkdirs();
+            //            try {
+            //                Files.write(Paths.get("before/" + classPath + ".class"), inputBytes);
+            //                Files.write(Paths.get("after/" + classPath + ".class"), transformedBytes);
+            //            } catch (IOException e) {
+            //                // TODO Auto-generated catch block
+            //                e.printStackTrace();
+            //            }
             //Then re-convert the transformed bytecode to not interrupt the visitor chain:
             ClassReader cr = new ClassReader(transformedBytes);
             cr.accept(outputClassVisitor, 0);

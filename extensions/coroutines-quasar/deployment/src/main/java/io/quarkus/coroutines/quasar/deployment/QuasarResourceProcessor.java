@@ -36,7 +36,6 @@ public final class QuasarResourceProcessor {
 
     private static final DotName DOTNAME_SUSPENDABLE = DotName.createSimple(Suspendable.class.getName());
 
-
     @BuildStep
     void build(CombinedIndexBuildItem index,
             BuildProducer<BytecodeTransformerBuildItem> transformers) throws Exception {
