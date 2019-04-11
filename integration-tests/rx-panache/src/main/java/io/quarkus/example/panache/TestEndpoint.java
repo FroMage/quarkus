@@ -513,7 +513,9 @@ public class TestEndpoint {
     }
 
     enum PersistTest {
-        Iterable, Variadic, Stream;
+        Iterable,
+        Variadic,
+        Stream;
     }
 
     private CompletionStage<Void> testPersist(PersistTest persistTest) {
