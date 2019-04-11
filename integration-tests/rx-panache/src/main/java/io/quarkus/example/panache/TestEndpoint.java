@@ -16,6 +16,8 @@
 
 package io.quarkus.example.panache;
 
+import static com.ea.async.Async.await;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +35,7 @@ import org.eclipse.microprofile.reactive.streams.operators.ReactiveStreams;
 import org.junit.jupiter.api.Assertions;
 import org.reactivestreams.Publisher;
 
+import io.quarkus.coroutines.eaasync.Suspendable;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Parameters;
 import io.quarkus.panache.common.Sort;
@@ -48,279 +51,222 @@ public class TestEndpoint {
         return ReactiveStreams.fromPublisher(publisher).toList().run();
     }
 
+    @Suspendable
     @GET
     @Path("rx-model")
     public CompletionStage<String> testRxModel() {
-        return RxPerson.findAll().list()
-                .thenCompose(persons -> {
-                    Assertions.assertEquals(0, persons.size());
+        List<RxPerson> persons = await(RxPerson.findAll().list());
+        
+        Assertions.assertEquals(0, persons.size());
 
-                    return RxPerson.listAll();
-                }).thenCompose(persons -> {
-                    Assertions.assertEquals(0, persons.size());
+        persons = await(RxPerson.listAll());
+        Assertions.assertEquals(0, persons.size());
 
-                    return toList(RxPerson.findAll().stream());
-                }).thenCompose(persons -> {
-                    Assertions.assertEquals(0, persons.size());
+        persons = await(toList(RxPerson.findAll().stream()));
+        Assertions.assertEquals(0, persons.size());
 
-                    return toList(RxPerson.streamAll());
-                }).thenCompose(persons -> {
-                    Assertions.assertEquals(0, persons.size());
+        persons = await(toList(RxPerson.streamAll()));
+        Assertions.assertEquals(0, persons.size());
 
-                    return RxPerson.findAll().singleResult().handle((v, x) -> x);
-                }).thenCompose(x -> {
-                    Assertions.assertTrue(x instanceof CompletionException);
-                    Assertions.assertTrue(x.getCause() instanceof NoResultException);
+        try {
+            await(RxPerson.findAll().singleResult());
+            Assertions.fail();
+        }catch(Exception x) {
+            Assertions.assertTrue(x instanceof CompletionException);
+            Assertions.assertTrue(x.getCause() instanceof NoResultException);
+        }
 
-                    return RxPerson.findAll().firstResult();
-                }).thenCompose(person -> {
-                    Assertions.assertNull(person);
+        RxPerson person = await(RxPerson.findAll().firstResult());
+        Assertions.assertNull(person);
 
-                    return makeSavedRxPerson();
-                }).thenCompose(person -> {
-                    Assertions.assertNotNull(person.id);
+        person = await(makeSavedRxPerson());
+        Assertions.assertNotNull(person.id);
 
-                    return RxPerson.count()
-                            .thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        long count = await(RxPerson.count());
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.count("name = ?1", "stef");
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(RxPerson.count("name = ?1", "stef"));
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.count("name = :name", Parameters.with("name", "stef").map());
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(RxPerson.count("name = :name", Parameters.with("name", "stef").map()));
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.count("name = :name", Parameters.with("name", "stef"));
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(RxPerson.count("name = :name", Parameters.with("name", "stef")));
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.count("name", "stef");
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(RxPerson.count("name", "stef"));
+        Assertions.assertEquals(1, count);
 
-                                return RxDog.count();
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(RxDog.count());
+        Assertions.assertEquals(1, count);
 
-                                return toList(person.dogs).thenApply(List::size);
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(toList(person.dogs)).size();
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.findAll().list();
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.findAll().list());
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.listAll();
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.listAll());
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.findAll().stream());
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.findAll().stream()));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.streamAll());
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.streamAll()));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.findAll().firstResult();
-                            }).thenCompose(p2 -> {
-                                Assertions.assertEquals(person, p2);
+        RxPerson p2 = await(RxPerson.findAll().firstResult());
+        Assertions.assertEquals(person, p2);
 
-                                return RxPerson.findAll().singleResult();
-                            }).thenCompose(p2 -> {
-                                Assertions.assertEquals(person, p2);
+        p2 = await(RxPerson.findAll().singleResult());
+        Assertions.assertEquals(person, p2);
 
-                                return RxPerson.find("name = ?1", "stef").list();
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.find("name = ?1", "stef").list());
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.list("name = ?1", "stef");
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.list("name = ?1", "stef"));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.find("name = :name", Parameters.with("name", "stef").map()).list();
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.find("name = :name", Parameters.with("name", "stef").map()).list());
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.find("name = :name", Parameters.with("name", "stef")).list();
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.find("name = :name", Parameters.with("name", "stef")).list());
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.list("name = :name", Parameters.with("name", "stef").map());
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.list("name = :name", Parameters.with("name", "stef").map()));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.list("name = :name", Parameters.with("name", "stef"));
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.list("name = :name", Parameters.with("name", "stef")));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.find("name", "stef").list();
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(RxPerson.find("name", "stef").list());
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.find("name = ?1", "stef").stream());
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.find("name = ?1", "stef").stream()));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.stream("name = ?1", "stef"));
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.stream("name = ?1", "stef")));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.find("name = :name", Parameters.with("name", "stef").map()).stream());
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.find("name = :name", Parameters.with("name", "stef").map()).stream()));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.find("name = :name", Parameters.with("name", "stef")).stream());
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.find("name = :name", Parameters.with("name", "stef")).stream()));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.stream("name = :name", Parameters.with("name", "stef").map()));
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.stream("name = :name", Parameters.with("name", "stef").map())));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.stream("name = :name", Parameters.with("name", "stef")));
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.stream("name = :name", Parameters.with("name", "stef"))));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.find("name", "stef").stream());
-                            }).thenCompose(persons -> {
-                                Assertions.assertEquals(1, persons.size());
-                                Assertions.assertEquals(person, persons.get(0));
+        persons = await(toList(RxPerson.find("name", "stef").stream()));
+        Assertions.assertEquals(1, persons.size());
+        Assertions.assertEquals(person, persons.get(0));
 
-                                return RxPerson.find("name", "stef").firstResult();
-                            }).thenCompose(p2 -> {
-                                Assertions.assertEquals(person, p2);
+        p2 = await(RxPerson.find("name", "stef").firstResult());
+        Assertions.assertEquals(person, p2);
 
-                                return RxPerson.find("name", "stef").singleResult();
-                            }).thenCompose(p2 -> {
-                                Assertions.assertEquals(person, p2);
+        p2 = await(RxPerson.find("name", "stef").singleResult());
+        Assertions.assertEquals(person, p2);
 
-                                return RxPerson.findById(person.id);
-                            }).thenCompose(byId -> {
-                                Assertions.assertEquals(person, byId);
+        p2 = await(RxPerson.findById(person.id));
+        Assertions.assertEquals(person, p2);
 
-                                return person.delete();
-                            })
-                            .thenCompose(v -> RxPerson.count())
-                            .thenCompose(count -> {
-                                Assertions.assertEquals(0, (long) count);
+        await(person.delete());
+        count = await(RxPerson.count());
+        Assertions.assertEquals(0, count);
 
-                                // Difference with JPA: no cascade
-                                return RxDog.deleteAll();
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        // Difference with JPA: no cascade
+        count = await(RxDog.deleteAll());
+        Assertions.assertEquals(1, count);
 
-                                return makeSavedRxPerson();
-                            });
-                }).thenCompose(newPerson -> {
-                    return RxPerson.count()
-                            .thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        RxPerson newPerson = await(makeSavedRxPerson());
+        count = await(RxPerson.count());
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.delete("name = ?1", "emmanuel");
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(0, (long) count);
+        count = await(RxPerson.delete("name = ?1", "emmanuel"));
+        Assertions.assertEquals(0, count);
 
-                                // FIXME: translate to owner_id
-                                return RxDog.delete("owner_id = ?1", newPerson.id);
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        // FIXME: translate to owner_id
+        count = await(RxDog.delete("owner_id = ?1", newPerson.id));
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.delete("name", "stef");
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(RxPerson.delete("name", "stef"));
+        Assertions.assertEquals(1, count);
 
-                                return makeSavedRxPerson();
-                            });
-                }).thenCompose(newPerson -> {
-                    // FIXME: translate to owner_id
-                    return RxDog.delete("owner_id = :owner", Parameters.with("owner", newPerson.id).map())
-                            .thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        newPerson = await(makeSavedRxPerson());
+        // FIXME: translate to owner_id
+        count = await(RxDog.delete("owner_id = :owner", Parameters.with("owner", newPerson.id).map()));
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.delete("name", "stef");
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(RxPerson.delete("name", "stef"));
+        Assertions.assertEquals(1, count);
 
-                                return makeSavedRxPerson();
-                            });
-                }).thenCompose(newPerson -> {
-                    // FIXME: translate to owner_id
-                    return RxDog.delete("owner_id = :owner", Parameters.with("owner", newPerson.id))
-                            .thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        newPerson = await(makeSavedRxPerson());
+        // FIXME: translate to owner_id
+        count = await(RxDog.delete("owner_id = :owner", Parameters.with("owner", newPerson.id)));
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.delete("name", "stef");
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
+        count = await(RxPerson.delete("name", "stef"));
+        Assertions.assertEquals(1, count);
 
-                                return RxPerson.deleteAll();
-                            });
-                }).thenCompose(count -> {
-                    Assertions.assertEquals(0, (long) count);
+        count = await(RxPerson.deleteAll());
+        Assertions.assertEquals(0, count);
 
-                    return makeSavedRxPerson();
-                }).thenCompose(newPerson -> {
-                    return RxDog.deleteAll();
-                }).thenCompose(count -> {
-                    Assertions.assertEquals(1, (long) count);
+        newPerson = await(makeSavedRxPerson());
+        count = await(RxDog.deleteAll());
+        Assertions.assertEquals(1, count);
 
-                    return RxPerson.deleteAll();
-                }).thenCompose(count -> {
-                    Assertions.assertEquals(1, (long) count);
+        count = await(RxPerson.deleteAll());
+        Assertions.assertEquals(1, count);
 
-                    return testPersist(PersistTest.Iterable);
-                }).thenCompose(v -> testPersist(PersistTest.Stream))
-                .thenCompose(v -> testPersist(PersistTest.Variadic))
-                .thenCompose(v -> RxPerson.deleteAll())
-                .thenCompose(c -> {
-                    Assertions.assertEquals(6, c);
+        await(testPersist(PersistTest.Iterable));
+        await(testPersist(PersistTest.Stream));
+        await(testPersist(PersistTest.Variadic));
+        
+        count = await(RxPerson.deleteAll());
+        Assertions.assertEquals(6, count);
 
-                    return testSorting();
-                }).thenCompose(v -> {
-                    CompletionStage<Void> chain = CompletableFuture.completedFuture(null);
-                    // paging
-                    for (int i = 0; i < 7; i++) {
-                        int finalI = i;
-                        chain = chain.thenCompose(v2 -> makeSavedRxPerson(String.valueOf(finalI)).thenApply(p -> null));
-                    }
-                    return chain;
-                }).thenCompose(v -> testPaging(RxPerson.findAll()))
-                .thenCompose(v -> testPaging(RxPerson.find("ORDER BY name")))
-                .thenCompose(v -> RxPerson.findAll().singleResult().handle((v2, x) -> x))
-                .thenCompose(x -> {
-                    Assertions.assertTrue(x instanceof CompletionException);
-                    Assertions.assertTrue(x.getCause() instanceof NonUniqueResultException);
+        await(testSorting());
+        // paging
+        for (int i = 0; i < 7; i++) {
+            await(makeSavedRxPerson(String.valueOf(i)));
+        }
+        
+        await(testPaging(RxPerson.findAll()));
+        await(testPaging(RxPerson.find("ORDER BY name")));
+        try {
+            await(RxPerson.findAll().singleResult());
+            Assertions.fail();
+        }catch(Exception x) {
+            Assertions.assertTrue(x instanceof CompletionException);
+            Assertions.assertTrue(x.getCause() instanceof NonUniqueResultException);
+        }
+        person = await(RxPerson.findAll().firstResult());
+        Assertions.assertNotNull(person);
 
-                    return RxPerson.findAll().firstResult();
-                }).thenCompose(p -> {
-                    Assertions.assertNotNull(p);
+        count = await(RxPerson.deleteAll());
+        Assertions.assertEquals(7, count);
 
-                    return RxPerson.deleteAll();
-                }).thenApply(count -> {
-                    Assertions.assertEquals(7, count);
-
-                    return "OK";
-                });
+        return CompletableFuture.completedFuture("OK");
     }
 
     private CompletionStage<Void> testPaging(PanacheRxQuery<RxPerson> query) {
