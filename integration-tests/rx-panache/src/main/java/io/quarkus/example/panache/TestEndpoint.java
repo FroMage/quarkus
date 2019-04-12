@@ -56,7 +56,7 @@ public class TestEndpoint {
     @Path("rx-model")
     public CompletionStage<String> testRxModel() {
         List<RxPerson> persons = await(RxPerson.findAll().list());
-        
+
         Assertions.assertEquals(0, persons.size());
 
         persons = await(RxPerson.listAll());
@@ -71,7 +71,7 @@ public class TestEndpoint {
         try {
             await(RxPerson.findAll().singleResult());
             Assertions.fail();
-        }catch(Exception x) {
+        } catch (Exception x) {
             Assertions.assertTrue(x instanceof CompletionException);
             Assertions.assertTrue(x.getCause() instanceof NoResultException);
         }
@@ -241,22 +241,29 @@ public class TestEndpoint {
         await(testPersist(PersistTest.Iterable));
         await(testPersist(PersistTest.Stream));
         await(testPersist(PersistTest.Variadic));
-        
+
         count = await(RxPerson.deleteAll());
         Assertions.assertEquals(6, count);
 
         await(testSorting());
         // paging
-        for (int i = 0; i < 7; i++) {
-            await(makeSavedRxPerson(String.valueOf(i)));
-        }
-        
+        //        for (int i = 0; i < 7; i++) {
+        // manual loop unrolling to get rid of https://github.com/oracle/graal/issues/366
+        await(makeSavedRxPerson(String.valueOf(0)));
+        await(makeSavedRxPerson(String.valueOf(1)));
+        await(makeSavedRxPerson(String.valueOf(2)));
+        await(makeSavedRxPerson(String.valueOf(3)));
+        await(makeSavedRxPerson(String.valueOf(4)));
+        await(makeSavedRxPerson(String.valueOf(5)));
+        await(makeSavedRxPerson(String.valueOf(6)));
+        //        }
+
         await(testPaging(RxPerson.findAll()));
         await(testPaging(RxPerson.find("ORDER BY name")));
         try {
             await(RxPerson.findAll().singleResult());
             Assertions.fail();
-        }catch(Exception x) {
+        } catch (Exception x) {
             Assertions.assertTrue(x instanceof CompletionException);
             Assertions.assertTrue(x.getCause() instanceof NonUniqueResultException);
         }
