@@ -32,6 +32,8 @@ import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.ExecutionTime;
+import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.ApplicationIndexBuildItem;
 import io.quarkus.deployment.builditem.BytecodeTransformerBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
@@ -42,6 +44,8 @@ import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.PanacheRxRepository;
 import io.quarkus.panache.rx.PanacheRxRepositoryBase;
 import io.quarkus.panache.rx.runtime.PgPoolProducer;
+import io.quarkus.panache.rx.runtime.PgPoolRuntimeConfig;
+import io.quarkus.panache.rx.runtime.PgPoolTemplate;
 import io.reactiverse.pgclient.PgPool;
 
 /**
@@ -151,6 +155,14 @@ public final class PanacheRxResourceProcessor {
 
     private boolean isArCProxy(ClassInfo classInfo) {
         return classInfo.interfaceNames().contains(DOTNAME_ARC_CLIENT_PROXY);
+    }
+
+    @Record(ExecutionTime.RUNTIME_INIT)
+    @BuildStep
+    void configureRuntimeProperties(PgPoolTemplate template,
+            PgPoolRuntimeConfig runtimeConfig) {
+
+        template.configureRuntimeProperties(runtimeConfig);
     }
 
     static final class ProcessorClassOutput implements ClassOutput {

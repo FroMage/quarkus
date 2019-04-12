@@ -8,9 +8,6 @@ import java.util.concurrent.ExecutionException;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.reactiverse.axle.pgclient.PgClient;
 import io.reactiverse.axle.pgclient.PgPool;
@@ -19,42 +16,18 @@ import io.reactiverse.pgclient.PgPoolOptions;
 @ApplicationScoped
 public class PgPoolProducer {
 
-    @Inject
-    @ConfigProperty(name = "quarkus.datasource.host", defaultValue = "localhost")
-    private String host;
-
-    @Inject
-    @ConfigProperty(name = "quarkus.datasource.port")
-    private Integer port;
-
-    @Inject
-    @ConfigProperty(name = "quarkus.datasource.username")
-    private String user;
-
-    @Inject
-    @ConfigProperty(name = "quarkus.datasource.database")
-    private String database;
-
-    @Inject
-    @ConfigProperty(name = "quarkus.datasource.password")
-    private String pass;
-
-    @Inject
-    @ConfigProperty(name = "quarkus.datasource.max-size")
-    private Integer maxSize;
+    private DataSourceRuntimeConfig runtimeConfig;
 
     @ApplicationScoped
     @Produces
     public io.reactiverse.pgclient.PgPool getClient() {
         PgPoolOptions options = new PgPoolOptions()
-                .setHost(host)
-                .setDatabase(database)
-                .setUser(user)
-                .setPassword(pass);
-        if (maxSize != null)
-            options.setMaxSize(maxSize);
-        if (port != null)
-            options.setPort(port);
+                .setHost(runtimeConfig.host.get())
+                .setDatabase(runtimeConfig.database.get())
+                .setUser(runtimeConfig.username.get())
+                .setPassword(runtimeConfig.password.get());
+        options.setMaxSize(runtimeConfig.maxSize);
+        options.setPort(runtimeConfig.port);
 
         // Create the client pool
         PgPool pool = PgClient.pool(options);
@@ -81,5 +54,13 @@ public class PgPoolProducer {
         }
 
         return pool.getDelegate();
+    }
+
+    public void setRuntimeConfig(DataSourceRuntimeConfig runtimeConfig) {
+        this.runtimeConfig = runtimeConfig;
+    }
+
+    public DataSourceRuntimeConfig getRuntimeConfig() {
+        return runtimeConfig;
     }
 }
