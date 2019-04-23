@@ -282,24 +282,26 @@ public class TestResource {
         return fromJsonEntity;
     }
 
-    @GET
+    @POST
     @Path("params/{path}")
-    public void regularParams(@PathParam("path") String path,
+    public String regularParams(@PathParam("path") String path,
             @FormParam("form") String form,
             @CookieParam("cookie") String cookie,
             @HeaderParam("header") String header,
             @MatrixParam("matrix") String matrix,
             @QueryParam("query") String query) {
+        return path + form + cookie + header + matrix + query;
     }
 
-    @GET
+    @POST
     @Path("params2/{path}")
-    public void resteasyParams(@org.jboss.resteasy.annotations.jaxrs.PathParam String path,
+    public String resteasyParams(@org.jboss.resteasy.annotations.jaxrs.PathParam String path,
             @org.jboss.resteasy.annotations.jaxrs.FormParam String form,
             @org.jboss.resteasy.annotations.jaxrs.CookieParam String cookie,
             @org.jboss.resteasy.annotations.jaxrs.HeaderParam String header,
             @org.jboss.resteasy.annotations.jaxrs.MatrixParam String matrix,
             @org.jboss.resteasy.annotations.jaxrs.QueryParam String query) {
+        return path + form + cookie + header + matrix + query;
     }
 
     @POST

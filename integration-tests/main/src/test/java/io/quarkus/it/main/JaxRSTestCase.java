@@ -22,6 +22,13 @@ import static org.hamcrest.Matchers.isEmptyString;
 import java.io.ByteArrayOutputStream;
 import java.util.zip.GZIPOutputStream;
 
+import javax.ws.rs.CookieParam;
+import javax.ws.rs.FormParam;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.MatrixParam;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.QueryParam;
+
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -39,6 +46,26 @@ public class JaxRSTestCase {
     @Test
     public void testInteger() {
         RestAssured.when().get("/test/int/10").then().body(is("11"));
+    }
+
+    @Test
+    public void testParams() {
+        RestAssured.with()
+                .header("header", "d")
+                .cookie("cookie", "c")
+                .formParam("form", "b")
+                .post("/test/params/a;matrix=e?query=f")
+                .then().body(is("abcdef"));
+    }
+
+    @Test
+    public void testParams2() {
+        RestAssured.with()
+                .header("header", "d")
+                .cookie("cookie", "c")
+                .formParam("form", "b")
+                .post("/test/params2/a;matrix=e?query=f")
+                .then().body(is("abcdef"));
     }
 
     @Test
