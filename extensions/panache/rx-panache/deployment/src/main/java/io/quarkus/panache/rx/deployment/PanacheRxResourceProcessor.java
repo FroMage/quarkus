@@ -16,38 +16,44 @@
 
 package io.quarkus.panache.rx.deployment;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
-import org.jboss.jandex.Type;
 
 import io.quarkus.arc.ClientProxy;
-import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
-import io.quarkus.arc.processor.BeanInfo;
+import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.ExecutionTime;
+import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.ApplicationArchivesBuildItem;
 import io.quarkus.deployment.builditem.ApplicationIndexBuildItem;
+import io.quarkus.deployment.builditem.ArchiveRootBuildItem;
 import io.quarkus.deployment.builditem.BytecodeTransformerBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
+import io.quarkus.deployment.builditem.HotDeploymentConfigFileBuildItem;
+import io.quarkus.deployment.builditem.substrate.SubstrateResourceBuildItem;
+import io.quarkus.deployment.configuration.ConfigurationError;
 import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.panache.rx.PanacheRxEntity;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.PanacheRxRepository;
 import io.quarkus.panache.rx.PanacheRxRepositoryBase;
-import io.quarkus.panache.rx.runtime.PgPoolProducer;
-import io.reactiverse.pgclient.PgPool;
+import io.quarkus.panache.rx.runtime.PgPoolImporterTemplate;
+import io.quarkus.reactive.pg.client.deployment.PgPoolBuildItem;
 
 /**
  *
  */
 public final class PanacheRxResourceProcessor {
+
+    private static final String PANACHE_RX_CONFIG_PREFIX = "quarkus.panache-rx.";
 
     static final DotName DOTNAME_PANACHE_RX_REPOSITORY_BASE = DotName
             .createSimple(PanacheRxRepositoryBase.class.getName());
@@ -56,32 +62,6 @@ public final class PanacheRxResourceProcessor {
     private static final DotName DOTNAME_PANACHE_RX_ENTITY = DotName.createSimple(PanacheRxEntity.class.getName());
 
     private static final Object DOTNAME_ARC_CLIENT_PROXY = DotName.createSimple(ClientProxy.class.getName());
-
-    private static final Set<DotName> UNREMOVABLE_BEANS = Collections.unmodifiableSet(
-            new HashSet<>(Arrays.asList(
-                    DotName.createSimple(PgPoolProducer.class.getName()),
-                    DotName.createSimple(PgPool.class.getName()))));
-
-    @BuildStep
-    AdditionalBeanBuildItem producePgPool() {
-        return new AdditionalBeanBuildItem(PgPoolProducer.class);
-    }
-
-    @BuildStep
-    UnremovableBeanBuildItem ensureBeanLookupAvailible() {
-        return new UnremovableBeanBuildItem(new Predicate<BeanInfo>() {
-            @Override
-            public boolean test(BeanInfo beanInfo) {
-                for (Type t : beanInfo.getTypes()) {
-                    if (UNREMOVABLE_BEANS.contains(t.name())) {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-        });
-    }
 
     @BuildStep
     void build(CombinedIndexBuildItem index,
@@ -147,6 +127,49 @@ public final class PanacheRxResourceProcessor {
                 }
             }
         }
+    }
+
+    @BuildStep
+    @Record(ExecutionTime.RUNTIME_INIT)
+    void configure(PanacheRxConfig config,
+            PgPoolImporterTemplate template,
+            ApplicationArchivesBuildItem applicationArchivesBuildItem,
+            ArchiveRootBuildItem root,
+            BeanContainerBuildItem beanContainer,
+            BuildProducer<SubstrateResourceBuildItem> resourceProducer,
+            BuildProducer<HotDeploymentConfigFileBuildItem> hotDeploymentProducer,
+            // make sure we are executed after this one
+            PgPoolBuildItem pgPoolBuildItem) {
+
+        // sql-load-script
+        // explicit file or default one
+        String importFile = config.sqlLoadScript.orElse("import.sql"); //default Hibernate ORM file imported
+
+        Optional<Path> loadScriptPath = Optional
+                .ofNullable(applicationArchivesBuildItem.getRootArchive().getChildPath(importFile));
+
+        // we enroll for hot deployment even if the file does not exist
+        hotDeploymentProducer.produce(new HotDeploymentConfigFileBuildItem(importFile));
+
+        // enlist resource if present
+        loadScriptPath
+                .filter(path -> !Files.isDirectory(path))
+                .ifPresent(path -> {
+                    String resourceAsString = root.getPath().relativize(loadScriptPath.get()).toString();
+                    resourceProducer.produce(new SubstrateResourceBuildItem(resourceAsString));
+                    template.configure(importFile, beanContainer.getValue());
+                });
+
+        //raise exception if explicit file is not present (i.e. not the default)
+        config.sqlLoadScript
+                .filter(o -> !loadScriptPath.filter(path -> !Files.isDirectory(path)).isPresent())
+                .ifPresent(
+                        c -> {
+                            throw new ConfigurationError(
+                                    "Unable to find file referenced in '" + PANACHE_RX_CONFIG_PREFIX
+                                            + "sql-load-script="
+                                            + c + "'. Remove property or add file to your path.");
+                        });
     }
 
     private boolean isArCProxy(ClassInfo classInfo) {

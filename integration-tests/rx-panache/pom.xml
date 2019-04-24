@@ -23,10 +23,6 @@
             <artifactId>quarkus-rx-panache</artifactId>
         </dependency>
         <dependency>
-            <groupId>javax.persistence</groupId>
-            <artifactId>javax.persistence-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-resteasy</artifactId>
         </dependency>
@@ -166,7 +162,7 @@
                 </property>
             </activation>
             <properties>
-                <postgres.url>jdbc:postgresql://localhost:5432/hibernate_orm_test</postgres.url>
+                <postgres.url>vertx-reactive:postgres://localhost:5431/hibernate_orm_test</postgres.url>
             </properties>
             <build>
                 <plugins>
