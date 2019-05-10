@@ -6,7 +6,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
-import javax.servlet.SingleThreadModel;
 import javax.transaction.SystemException;
 import javax.transaction.Transaction;
 import javax.transaction.Transactional;
@@ -90,6 +89,9 @@ public class ContextEndpoint {
         });
     }
 
+    @Inject
+    TransactionalBean txBean;
+
     @Transactional
     @GET
     @Path("/transaction")
@@ -101,6 +103,9 @@ public class ContextEndpoint {
         entity.persist();
         Transaction t1 = Panache.getTransactionManager().getTransaction();
         Assertions.assertNotNull(t1);
+
+        System.err.println("REST TX: " + t1);
+        txBean.doInTx();
 
         return ret.thenApplyAsync(text -> {
             Assertions.assertEquals(1, ContextEntity.count());
