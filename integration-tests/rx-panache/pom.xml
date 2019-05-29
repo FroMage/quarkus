@@ -162,7 +162,7 @@
                 </property>
             </activation>
             <properties>
-                <postgres.url>vertx-reactive:postgres://localhost:5431/hibernate_orm_test</postgres.url>
+                <postgres.url>vertx-reactive:postgresql://localhost:5431/hibernate_orm_test</postgres.url>
             </properties>
             <build>
                 <plugins>

@@ -37,7 +37,7 @@ import io.quarkus.deployment.builditem.ArchiveRootBuildItem;
 import io.quarkus.deployment.builditem.BytecodeTransformerBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
-import io.quarkus.deployment.builditem.HotDeploymentConfigFileBuildItem;
+import io.quarkus.deployment.builditem.HotDeploymentWatchedFileBuildItem;
 import io.quarkus.deployment.builditem.substrate.SubstrateResourceBuildItem;
 import io.quarkus.deployment.configuration.ConfigurationError;
 import io.quarkus.gizmo.ClassOutput;
@@ -137,7 +137,7 @@ public final class PanacheRxResourceProcessor {
             ArchiveRootBuildItem root,
             BeanContainerBuildItem beanContainer,
             BuildProducer<SubstrateResourceBuildItem> resourceProducer,
-            BuildProducer<HotDeploymentConfigFileBuildItem> hotDeploymentProducer,
+            BuildProducer<HotDeploymentWatchedFileBuildItem> hotDeploymentProducer,
             // make sure we are executed after this one
             PgPoolBuildItem pgPoolBuildItem) {
 
@@ -149,7 +149,7 @@ public final class PanacheRxResourceProcessor {
                 .ofNullable(applicationArchivesBuildItem.getRootArchive().getChildPath(importFile));
 
         // we enroll for hot deployment even if the file does not exist
-        hotDeploymentProducer.produce(new HotDeploymentConfigFileBuildItem(importFile));
+        hotDeploymentProducer.produce(new HotDeploymentWatchedFileBuildItem(importFile));
 
         // enlist resource if present
         loadScriptPath
