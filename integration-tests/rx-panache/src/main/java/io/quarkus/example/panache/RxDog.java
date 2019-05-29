@@ -8,7 +8,6 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 
 import io.quarkus.panache.rx.PanacheRxEntityBase;
-import io.reactivex.Single;
 
 // custom id type
 @Entity

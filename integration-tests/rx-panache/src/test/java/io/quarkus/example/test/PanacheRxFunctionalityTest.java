@@ -18,10 +18,8 @@ package io.quarkus.example.test;
 
 import static org.hamcrest.Matchers.is;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import io.quarkus.example.panache.RxPerson;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 
