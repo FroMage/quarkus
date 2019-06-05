@@ -30,8 +30,46 @@ public class RxDataTypeEntity extends PanacheRxEntity<RxDataTypeEntity> {
 
     public double primitiveDouble;
     public Double boxedDouble;
-
-    // FIXME: Date, math?
+    
+    public String string;
+//
+//    public BigInteger bigInteger;
+//    public BigDecimal bigDecimal;
+//
+//    // date
+//    public java.sql.Date sqlDate;
+//    // time
+//    public java.sql.Time sqlTime;
+//    // timestamp
+//    public java.sql.Timestamp sqlTimestamp;
+//    
+//    // date
+//    public java.util.Date utilDate;
+//    // timestamp or date
+//    public java.util.Calendar utilCalendar;
+//
+//    // bigint
+//    public Duration duration;
+//    // timestamp
+//    public Instant instant;
+//    // timestamp
+//    public LocalDateTime localDateTime;
+//    // date
+//    public LocalDate localDate;
+//    // time
+//    public LocalTime localTime;
+//    // timestamp
+//    public OffsetDateTime offsetDateTime;
+//    // time
+//    public OffsetTime offsetTime;
+//    // timestamp
+//    public ZonedDateTime zonedDateTime;
+//    
+//    public UUID uuid;
+    
+    // FIXME: byte[], Byte[], char[], Character[]
+    
     // FIXME: enum, Serializable?
+    // FIXME: Blob, Clob
     // FIXME: Embedded?, ManyToMany, arrays, Maps, Collections
 }

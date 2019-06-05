@@ -28,5 +28,7 @@ CREATE TABLE RxDataTypeEntity (id bigint not null,
  primitiveDouble double precision NOT NULL,
  boxedDouble double precision,
 
+ string varchar,
+
  PRIMARY KEY (id)
 );

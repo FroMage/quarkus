@@ -116,9 +116,10 @@ public class EntityField {
     }
 
     public String columnName() {
+        // FIXME: should be locale-independent
         if (isManyToOne())
-            return name + "_id";
-        return name;
+            return name.toLowerCase() + "_id";
+        return name.toLowerCase();
     }
 
     public String getGetterName() {

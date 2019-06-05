@@ -1125,10 +1125,39 @@ public class TestEndpoint {
 
         entity.primitiveDouble = 12;
         entity.boxedDouble = 13.0;
+        
+        entity.string = "asd";
 
         return entity.save()
-                .thenApply(savedEntity -> RxDataTypeEntity.findById(savedEntity.id))
+                .thenCompose(savedEntity -> RxDataTypeEntity.<RxDataTypeEntity>findById(savedEntity.id))
                 .thenApply(loadedEntity -> {
+                    
+                    Assertions.assertEquals(entity.primitiveBoolean, loadedEntity.primitiveBoolean);
+                    Assertions.assertEquals(entity.boxedBoolean, loadedEntity.boxedBoolean);
+                    
+                    Assertions.assertEquals(entity.primitiveCharacter, loadedEntity.primitiveCharacter);
+                    Assertions.assertEquals(entity.boxedCharacter, loadedEntity.boxedCharacter);
+
+                    Assertions.assertEquals(entity.primitiveByte, loadedEntity.primitiveByte);
+                    Assertions.assertEquals(entity.boxedByte, loadedEntity.boxedByte);
+
+                    Assertions.assertEquals(entity.primitiveShort, loadedEntity.primitiveShort);
+                    Assertions.assertEquals(entity.boxedShort, loadedEntity.boxedShort);
+
+                    Assertions.assertEquals(entity.primitiveInteger, loadedEntity.primitiveInteger);
+                    Assertions.assertEquals(entity.boxedInteger, loadedEntity.boxedInteger);
+
+                    Assertions.assertEquals(entity.primitiveLong, loadedEntity.primitiveLong);
+                    Assertions.assertEquals(entity.boxedLong, loadedEntity.boxedLong);
+
+                    Assertions.assertEquals(entity.primitiveFloat, loadedEntity.primitiveFloat);
+                    Assertions.assertEquals(entity.boxedFloat, loadedEntity.boxedFloat);
+
+                    Assertions.assertEquals(entity.primitiveDouble, loadedEntity.primitiveDouble);
+                    Assertions.assertEquals(entity.boxedDouble, loadedEntity.boxedDouble);
+
+                    Assertions.assertEquals(entity.string, loadedEntity.string);
+
                     return "OK";
                 });
     }
