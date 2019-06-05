@@ -20,14 +20,22 @@ public class EntityField {
     boolean isEnum;
 
     private static final DotName DOTNAME_STRING = DotName.createSimple(String.class.getName());
-    private static final DotName DOTNAME_BOOLEAN = DotName.createSimple(Boolean.class.getName());
-    private static final DotName DOTNAME_BYTE = DotName.createSimple(Byte.class.getName());
-    private static final DotName DOTNAME_SHORT = DotName.createSimple(Short.class.getName());
-    private static final DotName DOTNAME_INTEGER = DotName.createSimple(Integer.class.getName());
-    private static final DotName DOTNAME_LONG = DotName.createSimple(Long.class.getName());
-    private static final DotName DOTNAME_FLOAT = DotName.createSimple(Float.class.getName());
-    private static final DotName DOTNAME_DOUBLE = DotName.createSimple(Double.class.getName());
-    private static final DotName DOTNAME_CHARACTER = DotName.createSimple(Character.class.getName());
+    private static final DotName DOTNAME_BOXED_BOOLEAN = DotName.createSimple(Boolean.class.getName());
+    private static final DotName DOTNAME_BOOLEAN = DotName.createSimple(Boolean.TYPE.getName());
+    private static final DotName DOTNAME_BOXED_BYTE = DotName.createSimple(Byte.class.getName());
+    private static final DotName DOTNAME_BYTE = DotName.createSimple(Byte.TYPE.getName());
+    private static final DotName DOTNAME_BOXED_SHORT = DotName.createSimple(Short.class.getName());
+    private static final DotName DOTNAME_SHORT = DotName.createSimple(Short.TYPE.getName());
+    private static final DotName DOTNAME_BOXED_INTEGER = DotName.createSimple(Integer.class.getName());
+    private static final DotName DOTNAME_INTEGER = DotName.createSimple(Integer.TYPE.getName());
+    private static final DotName DOTNAME_BOXED_LONG = DotName.createSimple(Long.class.getName());
+    private static final DotName DOTNAME_LONG = DotName.createSimple(Long.TYPE.getName());
+    private static final DotName DOTNAME_BOXED_FLOAT = DotName.createSimple(Float.class.getName());
+    private static final DotName DOTNAME_FLOAT = DotName.createSimple(Float.TYPE.getName());
+    private static final DotName DOTNAME_BOXED_DOUBLE = DotName.createSimple(Double.class.getName());
+    private static final DotName DOTNAME_DOUBLE = DotName.createSimple(Double.TYPE.getName());
+    private static final DotName DOTNAME_BOXED_CHARACTER = DotName.createSimple(Character.class.getName());
+    private static final DotName DOTNAME_CHARACTER = DotName.createSimple(Character.TYPE.getName());
 
     public EntityField(String name, Type type, IndexView index) {
         this.name = name;
@@ -53,33 +61,49 @@ public class EntityField {
 
     public String getFromRowMethod() {
         DotName typeName = type.name();
-        // FIXME: primitives, byte, character
         if (typeName.equals(DOTNAME_STRING))
             return "getString";
+        if (typeName.equals(DOTNAME_BYTE))
+            return "getByte";
+        if (typeName.equals(DOTNAME_BOXED_BYTE))
+            return "getBoxedByte";
+        if (typeName.equals(DOTNAME_CHARACTER))
+            return "getCharacter";
+        if (typeName.equals(DOTNAME_BOXED_CHARACTER))
+            return "getBoxedCharacter";
         if (typeName.equals(DOTNAME_BOOLEAN))
             return "getBoolean";
+        if (typeName.equals(DOTNAME_BOXED_BOOLEAN))
+            return "getBoxedBoolean";
         if (typeName.equals(DOTNAME_SHORT))
             return "getShort";
-        if (typeName.equals(DOTNAME_INTEGER)
-                || isEnum)
+        if (typeName.equals(DOTNAME_BOXED_SHORT))
+            return "getBoxedShort";
+        if (typeName.equals(DOTNAME_INTEGER))
             return "getInteger";
-        if (typeName.equals(DOTNAME_LONG)
-                // FIXME: type of ID
-                || isManyToOne())
+        if (typeName.equals(DOTNAME_BOXED_INTEGER))
+            return "getBoxedInteger";
+        if (typeName.equals(DOTNAME_LONG))
             return "getLong";
+        if (typeName.equals(DOTNAME_BOXED_LONG))
+            return "getBoxedLong";
         if (typeName.equals(DOTNAME_FLOAT))
             return "getFloat";
+        if (typeName.equals(DOTNAME_BOXED_FLOAT))
+            return "getBoxedFloat";
         if (typeName.equals(DOTNAME_DOUBLE))
             return "getDouble";
+        if (typeName.equals(DOTNAME_BOXED_DOUBLE))
+            return "getBoxedDouble";
         throw new RuntimeException("Field type not supported yet: " + type + " for field " + name);
     }
 
     public Type mappedType() {
         if (isEnum)
-            return Type.create(DOTNAME_INTEGER, Kind.CLASS);
+            return Type.create(DOTNAME_BOXED_INTEGER, Kind.CLASS);
         // FIXME: ID type
         if (isManyToOne())
-            return Type.create(DOTNAME_LONG, Kind.CLASS);
+            return Type.create(DOTNAME_BOXED_LONG, Kind.CLASS);
         return type;
     }
 
@@ -117,4 +141,20 @@ public class EntityField {
         return mappedType().name().toString();
     }
 
+    public String getToTupleStoreMethod() {
+        DotName typeName = type.name();
+        if (typeName.equals(DOTNAME_CHARACTER))
+            return "storeCharacter";
+        if (typeName.equals(DOTNAME_BOXED_CHARACTER))
+            return "storeBoxedCharacter";
+        if (isEnum)
+            return "storeEnum";
+        return null;
+    }
+
+    public String getToTupleStoreType() {
+        if (isEnum)
+            return "Ljava/lang/Enum;";
+        return typeDescriptor;
+    }
 }

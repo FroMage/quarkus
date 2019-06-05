@@ -27,6 +27,7 @@ import io.quarkus.panache.rx.PanacheRxEntity;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.RxModelInfo;
 import io.quarkus.panache.rx.deployment.PanacheRxResourceProcessor.ProcessorClassOutput;
+import io.quarkus.panache.rx.runtime.RxDataTypes;
 import io.quarkus.panache.rx.runtime.RxOperations;
 import io.reactiverse.axle.pgclient.Row;
 import io.reactiverse.axle.pgclient.Tuple;
@@ -187,43 +188,38 @@ public class PanacheRxModelInfoGenerator {
                         MethodDescriptor.ofMethod(RxOperations.class, "deferPublisher", Publisher.class, Callable.class),
                         deferred.getInstance()));
             } else {
-                value = fromRow.invokeVirtualMethod(
-                        MethodDescriptor.ofMethod(Row.class, field.getFromRowMethod(), field.mappedTypeClassName(),
-                                String.class),
-                        fromRow.getMethodParam(0), fromRow.load(field.columnName()));
                 if (field.isEnum) {
-                    BranchResult branch = fromRow.ifNull(value);
+                    ResultHandle enumValues = fromRow.invokeStaticMethod(MethodDescriptor.ofMethod(field.typeClassName(),
+                            "values", "[L" + field.typeClassName() + ";"));
 
-                    branch.trueBranch().assign(fieldValue, branch.trueBranch().loadNull());
-                    branch.trueBranch().close();
-
-                    ResultHandle enumValues = branch.falseBranch().invokeStaticMethod(
-                            MethodDescriptor.ofMethod(field.typeClassName(), "values", "[L" + field.typeClassName() + ";"));
-                    value = branch.falseBranch().readArrayValue(enumValues, branch.falseBranch()
-                            .invokeVirtualMethod(MethodDescriptor.ofMethod(Integer.class, "intValue", int.class), value));
-                    branch.falseBranch().assign(fieldValue, value);
-                    branch.falseBranch().close();
+                    value = fromRow.invokeStaticMethod(MethodDescriptor.ofMethod(RxDataTypes.class, "getEnum", Enum.class,
+                            Row.class, String.class, Enum[].class),
+                            fromRow.getMethodParam(0), fromRow.load(field.columnName()), enumValues);
                 } else if (field.isManyToOne()) {
-                    FunctionCreator deferred = fromRow.createFunction(Callable.class);
-                    BytecodeCreator deferredCreator = deferred.getBytecode();
-                    ResultHandle byId = deferredCreator.invokeStaticMethod(
-                            MethodDescriptor.ofMethod(field.entityClassName(), "findById", CompletionStage.class, Object.class),
-                            value);
-                    // fieldValue = RxOperations.deferCompletionStage(() -> findById(value))
-                    deferredCreator.returnValue(byId);
-                    deferredCreator.close();
-                    fromRow.assign(fieldValue, fromRow.invokeStaticMethod(
-                            MethodDescriptor.ofMethod(RxOperations.class, "deferCompletionStage", CompletionStage.class,
-                                    Callable.class),
-                            deferred.getInstance()));
+                    value = fromRow.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(RxDataTypes.class, "getManyToOne", CompletionStage.class,
+                                    Row.class, String.class, RxModelInfo.class),
+                            fromRow.getMethodParam(0), fromRow.load(field.columnName()),
+                            getModelInfo(fromRow, field.entityClassName()));
                 } else {
-                    fromRow.assign(fieldValue, value);
+                    value = fromRow.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(RxDataTypes.class, field.getFromRowMethod(), field.mappedTypeClassName(),
+                                    Row.class, String.class),
+                            fromRow.getMethodParam(0), fromRow.load(field.columnName()));
                 }
+                fromRow.assign(fieldValue, value);
             }
             fromRow.writeInstanceField(FieldDescriptor.of(modelClassName, field.name, field.typeDescriptor), variable,
                     fieldValue);
         }
         fromRow.returnValue(variable);
+    }
+
+    private static ResultHandle getModelInfo(MethodCreator creator, String entityClassName) {
+        String modelInfoClassName = entityClassName + PanacheRxEntityEnhancer.RX_MODEL_SUFFIX;
+        return creator.readStaticField(FieldDescriptor.of(modelInfoClassName,
+                PanacheRxEntityEnhancer.RX_MODEL_FIELD_NAME,
+                modelInfoClassName));
     }
 
     private static void createToTuple(ClassCreator modelClass, String modelClassName, List<EntityField> fields,
@@ -274,16 +270,12 @@ public class PanacheRxModelInfoGenerator {
                 fieldValue = creator.readInstanceField(FieldDescriptor.of(modelClassName, field.name, field.typeDescriptor),
                         entityParam);
             }
-            if (field.isEnum) {
-                // FIXME: handle NPE
-                AssignableResultHandle enumValue = creator.createVariable(field.typeDescriptor);
-                BranchResult nullCheck = creator.ifNull(fieldValue);
-                nullCheck.trueBranch().assign(enumValue, nullCheck.trueBranch().loadNull());
-                nullCheck.falseBranch().assign(enumValue,
-                        nullCheck.falseBranch().invokeVirtualMethod(MethodDescriptor.ofMethod(Enum.class, "ordinal", int.class),
-                                fieldValue));
-                fieldValue = enumValue;
-            }
+            String toTupleStoreMethod = field.getToTupleStoreMethod();
+            if (toTupleStoreMethod != null)
+                fieldValue = creator.invokeStaticMethod(
+                        MethodDescriptor.ofMethod(RxDataTypes.class, toTupleStoreMethod, Object.class,
+                                field.getToTupleStoreType()),
+                        fieldValue);
             creator.invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class), myTuple,
                     fieldValue);
         }
