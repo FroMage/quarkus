@@ -1096,4 +1096,40 @@ public class TestEndpoint {
                     return rxDogRepository.save(dog).thenApply(v -> person);
                 });
     }
+
+    @GET
+    @Path("datatypes")
+    public CompletionStage<String> testRxDataTypes() {
+        RxDataTypeEntity entity = new RxDataTypeEntity();
+
+        entity.primitiveBoolean = true;
+        entity.boxedBoolean = true;
+
+        entity.primitiveCharacter = 'a';
+        entity.boxedCharacter = 'b';
+
+        entity.primitiveByte = 1;
+        entity.boxedByte = 2;
+
+        entity.primitiveShort = 3;
+        entity.boxedShort = 4;
+
+        entity.primitiveInteger = 5;
+        entity.boxedInteger = 6;
+
+        entity.primitiveLong = 7;
+        entity.boxedLong = 8l;
+
+        entity.primitiveFloat = 10;
+        entity.boxedFloat = 11.0f;
+
+        entity.primitiveDouble = 12;
+        entity.boxedDouble = 13.0;
+
+        return entity.save()
+                .thenApply(savedEntity -> RxDataTypeEntity.findById(savedEntity.id))
+                .thenApply(loadedEntity -> {
+                    return "OK";
+                });
+    }
 }

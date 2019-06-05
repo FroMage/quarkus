@@ -33,5 +33,6 @@ public class PanacheRxFunctionalityTest {
     public void testPanacheFunctionality() throws Exception {
         RestAssured.when().get("/test/rx-model-repository").then().body(is("OK"));
         RestAssured.when().get("/test/rx-model").then().body(is("OK"));
+        RestAssured.when().get("/test/datatypes").then().body(is("OK"));
     }
 }

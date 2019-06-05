@@ -17,6 +17,11 @@
 
     <artifactId>quarkus-integration-test-rx-panache</artifactId>
     <name>Quarkus - Integration Tests - RX Panache</name>
+    
+    <properties>
+        <postgres.url>vertx-reactive:postgresql://localhost:5432/hibernate_orm_test</postgres.url>
+    </properties>
+    
     <dependencies>
         <dependency>
             <groupId>io.quarkus</groupId>
