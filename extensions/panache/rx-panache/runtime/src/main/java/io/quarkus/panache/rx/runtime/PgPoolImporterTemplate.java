@@ -36,12 +36,17 @@ public class PgPoolImporterTemplate {
         if (sql != null) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(sql, "UTF-8"))) {
                 String line;
+                String command = "";
                 while ((line = reader.readLine()) != null) {
                     line = line.trim();
                     if (line.startsWith("--") || line.isEmpty())
                         continue;
-                    // FIXME: multi-line SQL?
-                    pool.query(line).toCompletableFuture().get();
+                    command += line;
+                    // only execute commands when ending with ;
+                    if (line.endsWith(";")) {
+                        pool.query(command).toCompletableFuture().get();
+                        command = "";
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
