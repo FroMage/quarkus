@@ -95,7 +95,7 @@ public class PgPoolImporterTemplate {
         schemaExport.setFormat(true);
         schemaExport.setDelimiter(";");
 //        schemaExport.setOutputFile("db-schema.sql");
-        schemaExport.create(EnumSet.of(TargetType.STDOUT), metadata.buildMetadata());
+        schemaExport.create(EnumSet.of(TargetType.DATABASE), metadata.buildMetadata());
     }
 
 }
