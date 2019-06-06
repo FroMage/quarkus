@@ -32,7 +32,7 @@ public class RxOperations {
         // FIXME: custom id generation
         return modelInfo.toTuple(entity).thenCompose(t -> {
             if (entity._getId() == null)
-                return pool.preparedQuery("SELECT nextval('hibernate_sequence') AS id")
+                return attachStackTrace(pool.preparedQuery("SELECT nextval('hibernate_sequence') AS id")
                         .thenApply(rowset -> rowset.iterator().next().getLong("id")).thenCompose(id -> {
                             // non-persisted tuples are missing their id
                             Tuple withId = Tuple.tuple();
@@ -44,20 +44,40 @@ public class RxOperations {
                                 entity._setId(id);
                                 return entity;
                             });
-                        });
+                        }));
             else
-                return pool.preparedQuery(modelInfo.updateStatement(), t).thenApply(rowset -> entity);
+                return attachStackTrace(pool.preparedQuery(modelInfo.updateStatement(), t).thenApply(rowset -> entity));
         });
     }
 
     public static <T extends PanacheRxEntityBase<?>> CompletionStage<Void> delete(T entity) {
         PgPool pool = getPgPool();
         // FIXME: id column from model info
-        return pool
+        return attachStackTrace(pool
                 .preparedQuery("DELETE FROM " + entity.getModelInfo().getTableName() + " WHERE id = $1",
                         Tuple.of(entity._getId()))
                 // ignoreElement
-                .thenApply(rowset -> null);
+                .thenApply(rowset -> null));
+    }
+
+    private static <T extends Throwable> void rethrow(Throwable x) throws T {
+        throw (T)x;
+    }
+
+    private static <V> CompletionStage<V> attachStackTrace(CompletionStage<V> cs) {
+        Throwable exception = new Exception().fillInStackTrace();
+        return cs.exceptionally(x -> {
+            fillInCause(x, exception);
+            rethrow(x);
+            return null;
+        });
+    }
+
+    private static void fillInCause(Throwable x, Throwable cause) {
+        while(x.getCause() != null){
+            x = x.getCause();
+        }
+        x.initCause(cause);
     }
 
     // Used by generated model
