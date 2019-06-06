@@ -222,16 +222,16 @@ public class TestEndpoint {
                             }).thenCompose(count -> {
                                 Assertions.assertEquals(1, count);
 
+                                // Difference with JPA: no cascade
+                                return RxDog.deleteAll();
+                            }).thenCompose(count -> {
+                                Assertions.assertEquals(1, (long) count);
+
                                 return person.delete();
                             })
                             .thenCompose(v -> RxPerson.count())
                             .thenCompose(count -> {
                                 Assertions.assertEquals(0, (long) count);
-
-                                // Difference with JPA: no cascade
-                                return RxDog.deleteAll();
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
 
                                 return makeSavedRxPerson();
                             });
@@ -755,16 +755,16 @@ public class TestEndpoint {
                             }).thenCompose(count -> {
                                 Assertions.assertEquals(1, count);
 
+                                // Difference with JPA: no cascade
+                                return rxDogRepository.deleteAll();
+                            }).thenCompose(count -> {
+                                Assertions.assertEquals(1, (long) count);
+
                                 return person.delete();
                             })
                             .thenCompose(v -> rxPersonRepository.count())
                             .thenCompose(count -> {
                                 Assertions.assertEquals(0, (long) count);
-
-                                // Difference with JPA: no cascade
-                                return rxDogRepository.deleteAll();
-                            }).thenCompose(count -> {
-                                Assertions.assertEquals(1, (long) count);
 
                                 return makeSavedRxPersonRepository();
                             });
