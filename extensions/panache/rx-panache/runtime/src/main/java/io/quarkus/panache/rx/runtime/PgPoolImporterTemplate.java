@@ -20,7 +20,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
+
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.cfg.Environment;
+import org.hibernate.tool.hbm2ddl.SchemaExport;
+import org.hibernate.tool.schema.TargetType;
 
 import io.quarkus.arc.runtime.BeanContainer;
 import io.quarkus.runtime.annotations.Template;
@@ -56,6 +66,36 @@ public class PgPoolImporterTemplate {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void updateSchema(Set<String> annotatedClasses, String url, String user, String pass) {
+        Map<String, String> settings = new HashMap<>();
+        settings.put(Environment.DRIVER, "org.postgresql.Driver");
+        settings.put(Environment.DIALECT, "org.hibernate.dialect.PostgreSQL95Dialect");
+        String jdbcUrl = "jdbc:"+url.substring("vertx-reactive:".length());
+        settings.put(Environment.URL, jdbcUrl);
+        settings.put(Environment.USER, user);
+        settings.put(Environment.PASS, pass);
+        settings.put(Environment.HBM2DDL_AUTO, "create");
+        settings.put(Environment.SHOW_SQL, "true");
+ 
+        MetadataSources metadata = new MetadataSources(
+                new StandardServiceRegistryBuilder()
+                        .applySettings(settings)
+                        .build());
+        for (String klass : annotatedClasses) {
+            try {
+                metadata.addAnnotatedClass(Class.forName(klass));
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        SchemaExport schemaExport = new SchemaExport();
+        schemaExport.setHaltOnError(true);
+        schemaExport.setFormat(true);
+        schemaExport.setDelimiter(";");
+//        schemaExport.setOutputFile("db-schema.sql");
+        schemaExport.create(EnumSet.of(TargetType.STDOUT), metadata.buildMetadata());
     }
 
 }

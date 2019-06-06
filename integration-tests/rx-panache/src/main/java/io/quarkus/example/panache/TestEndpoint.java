@@ -214,9 +214,13 @@ public class TestEndpoint {
                             }).thenCompose(p2 -> {
                                 Assertions.assertEquals(person, p2);
 
-                                return RxPerson.findById(person.id);
+                                return RxPerson.<RxPerson>findById(person.id);
                             }).thenCompose(byId -> {
                                 Assertions.assertEquals(person, byId);
+
+                                return toList(byId.dogs).thenApply(List::size);
+                            }).thenCompose(count -> {
+                                Assertions.assertEquals(1, count);
 
                                 return person.delete();
                             })
@@ -746,6 +750,10 @@ public class TestEndpoint {
                                 return rxPersonRepository.findById(person.id);
                             }).thenCompose(byId -> {
                                 Assertions.assertEquals(person, byId);
+
+                                return toList(byId.dogs).thenApply(List::size);
+                            }).thenCompose(count -> {
+                                Assertions.assertEquals(1, count);
 
                                 return person.delete();
                             })

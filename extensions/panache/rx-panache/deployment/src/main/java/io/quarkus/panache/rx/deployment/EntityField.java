@@ -138,6 +138,10 @@ public class EntityField {
         return entityClass.name().toString();
     }
 
+    public Type entityType() {
+        return entityClass;
+    }
+
     public String mappedTypeClassName() {
         return mappedType().name().toString();
     }

@@ -14,6 +14,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
+import org.hibernate.annotations.Target;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
@@ -21,15 +22,28 @@ import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.Type;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.TypePath;
 
+import io.quarkus.gizmo.DescriptorUtils;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.RxModelInfo;
 import io.quarkus.panache.rx.runtime.RxOperations;
 
 public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor, ClassVisitor> {
+
+    public final static String TRANSIENT_NAME = Transient.class.getName();
+    public final static String TRANSIENT_BINARY_NAME = TRANSIENT_NAME.replace('.', '/');
+    public final static String TRANSIENT_SIGNATURE = "L" + TRANSIENT_BINARY_NAME + ";";
+
+    public final static String TARGET_NAME = Target.class.getName();
+    public final static String TARGET_BINARY_NAME = TARGET_NAME.replace('.', '/');
+    public final static String TARGET_SIGNATURE = "L" + TARGET_BINARY_NAME + ";";
 
     public final static String RX_ENTITY_BASE_NAME = PanacheRxEntityBase.class.getName();
     public final static String RX_ENTITY_BASE_BINARY_NAME = RX_ENTITY_BASE_NAME.replace('.', '/');
@@ -102,6 +116,59 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             this.superName = superName;
         }
 
+        @Override
+        public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+            if((access & Opcodes.ACC_PUBLIC) != 0 && fields != null) {
+                EntityField entityField = fields.get(name);
+                if(entityField != null) {
+                    if(entityField.isOneToMany()) {
+                        // must create a fake field for hibernate with the same annotations
+                        FieldVisitor fakeFieldVisitor = super.visitField(Opcodes.ACC_PUBLIC, "__hibernate_fake_"+name, 
+                                                                         "Ljava/util/List;", 
+                                                                         "Ljava/util/List"+signature.substring(signature.indexOf("<")), 
+                                                                         null);
+                        // must add the @Transient annotation for hibernate. we don't care about it since we already
+                        // read the field
+                        FieldVisitor fieldVisitor = super.visitField(access, name, descriptor, signature, value);
+                        AnnotationVisitor annotationVisitor = fieldVisitor.visitAnnotation(TRANSIENT_SIGNATURE, true);
+                        annotationVisitor.visitEnd();
+
+                        return new FieldVisitor(Opcodes.ASM6, fieldVisitor) {
+                            @Override
+                            public void visitAttribute(Attribute attribute) {
+                                fakeFieldVisitor.visitAttribute(attribute);
+                                super.visitAttribute(attribute);
+                            }
+                            @Override
+                            public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+                                return new MultiplexingAnnotationVisitor(fakeFieldVisitor.visitAnnotation(descriptor, visible),
+                                                                         super.visitAnnotation(descriptor, visible));
+                            }
+                            @Override
+                            public void visitEnd() {
+                                fakeFieldVisitor.visitEnd();
+                                super.visitEnd();
+                            }
+                            @Override
+                            public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+                                return new MultiplexingAnnotationVisitor(fakeFieldVisitor.visitTypeAnnotation(typeRef, typePath, descriptor, visible),
+                                                                         super.visitTypeAnnotation(typeRef, typePath, descriptor, visible));
+                            }
+                        };
+                    } else if(entityField.isManyToOne()) {
+                        // Add @Target(class)
+                        FieldVisitor fieldVisitor = super.visitField(access, name, descriptor, signature, value);
+                        AnnotationVisitor annotationVisitor = fieldVisitor.visitAnnotation(TARGET_SIGNATURE, true);
+                        annotationVisitor.visit("value", org.objectweb.asm.Type.getType(DescriptorUtils.typeToString(entityField.entityType())));
+                        annotationVisitor.visitEnd();
+
+                        return fieldVisitor;
+                    }
+                }
+            }
+            return super.visitField(access, name, descriptor, signature, value);
+        }
+        
         @Override
         public MethodVisitor visitMethod(int access, String methodName, String descriptor, String signature,
                 String[] exceptions) {

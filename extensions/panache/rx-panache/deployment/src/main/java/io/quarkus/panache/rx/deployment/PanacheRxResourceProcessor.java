@@ -47,6 +47,7 @@ import io.quarkus.panache.rx.PanacheRxRepository;
 import io.quarkus.panache.rx.PanacheRxRepositoryBase;
 import io.quarkus.panache.rx.runtime.PgPoolImporterTemplate;
 import io.quarkus.reactive.pg.client.deployment.PgPoolBuildItem;
+import io.quarkus.reactive.pg.client.runtime.DataSourceConfig;
 
 /**
  *
@@ -64,7 +65,7 @@ public final class PanacheRxResourceProcessor {
     private static final Object DOTNAME_ARC_CLIENT_PROXY = DotName.createSimple(ClientProxy.class.getName());
 
     @BuildStep
-    void build(CombinedIndexBuildItem index,
+    ModelClassesBuildItem build(CombinedIndexBuildItem index,
             ApplicationIndexBuildItem applicationIndex,
             BuildProducer<BytecodeTransformerBuildItem> transformers,
             // FIXME: put back to support jpa/rx mixes but move it out of hibernate-orm to not depend on it
@@ -127,11 +128,17 @@ public final class PanacheRxResourceProcessor {
                 }
             }
         }
+        
+        Set<String> allModelClasses = new HashSet<>(rxModelClasses);
+        allModelClasses.add(PanacheRxEntity.class.getName());
+        return new ModelClassesBuildItem(allModelClasses);
     }
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     void configure(PanacheRxConfig config,
+                   DataSourceConfig dataSourceConfig,
+                   ModelClassesBuildItem modelClasses,
             PgPoolImporterTemplate template,
             ApplicationArchivesBuildItem applicationArchivesBuildItem,
             ArchiveRootBuildItem root,
@@ -160,6 +167,12 @@ public final class PanacheRxResourceProcessor {
                     template.configure(importFile, beanContainer.getValue());
                 });
 
+        // FIXME: same defaults as reactivepgclient
+        template.updateSchema(modelClasses.modelClasses, 
+                              dataSourceConfig.url.orElse(null), 
+                              dataSourceConfig.username.orElse(null), 
+                              dataSourceConfig.password.orElse(null));
+        
         //raise exception if explicit file is not present (i.e. not the default)
         config.sqlLoadScript
                 .filter(o -> !loadScriptPath.filter(path -> !Files.isDirectory(path)).isPresent())

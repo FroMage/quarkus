@@ -17,6 +17,7 @@
 package io.quarkus.example.panache;
 
 import javax.persistence.CascadeType;
+import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 
@@ -25,6 +26,7 @@ import org.reactivestreams.Publisher;
 
 import io.quarkus.panache.rx.PanacheRxEntity;
 
+@Entity
 public class RxPerson extends PanacheRxEntity<RxPerson> {
 
     public String name;
