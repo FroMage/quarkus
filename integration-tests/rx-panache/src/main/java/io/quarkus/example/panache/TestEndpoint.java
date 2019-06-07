@@ -18,6 +18,12 @@ package io.quarkus.example.panache;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -1140,6 +1146,34 @@ public class TestEndpoint {
         
         entity.bigDecimal = BigDecimal.ONE;
         entity.bigInteger = BigInteger.TEN;
+        
+        long now = System.currentTimeMillis();
+        // the constructor of Date/Time are wrong: they don't really ignore the time components you pass
+        // them that they are not interested in
+        entity.sqlDate = java.sql.Date.valueOf(LocalDate.now());
+        entity.sqlTime = java.sql.Time.valueOf(LocalTime.now());
+        entity.sqlTimestamp = new java.sql.Timestamp(now);
+        
+        entity.utilDate = entity.sqlTimestamp;
+        entity.utilDateAsDate = new java.util.Date(entity.sqlDate.getTime());
+        entity.utilDateAsTime = new java.util.Date(entity.sqlTime.getTime());
+        entity.utilDateAsTimestamp = entity.sqlTimestamp;
+
+        
+        entity.utilCalendar = java.util.GregorianCalendar.getInstance();
+        entity.utilCalendar.setTime(entity.utilDate);
+        entity.utilCalendarAsDate = java.util.GregorianCalendar.getInstance();
+        entity.utilCalendarAsDate.setTime(entity.utilDateAsDate);
+        entity.utilCalendarAsTimestamp = java.util.GregorianCalendar.getInstance();
+        entity.utilCalendarAsTimestamp.setTime(entity.utilDateAsTimestamp);
+        
+        entity.localDate = LocalDate.now();
+        entity.myLocalTime = LocalTime.now();
+        entity.localDateTime = LocalDateTime.now();
+        
+        entity.offsetTime = OffsetTime.now();
+        entity.offsetDateTime = OffsetDateTime.now();
+
 
         return entity.save()
                 .thenCompose(savedEntity -> RxDataTypeEntity.<RxDataTypeEntity>findById(savedEntity.id))
@@ -1173,6 +1207,27 @@ public class TestEndpoint {
 
                     Assertions.assertEquals(entity.bigDecimal.stripTrailingZeros(), loadedEntity.bigDecimal.stripTrailingZeros());
                     Assertions.assertEquals(entity.bigInteger, loadedEntity.bigInteger);
+
+                    Assertions.assertEquals(entity.sqlDate, loadedEntity.sqlDate);
+                    Assertions.assertEquals(entity.sqlTime, loadedEntity.sqlTime);
+                    Assertions.assertEquals(entity.sqlTimestamp, loadedEntity.sqlTimestamp);
+
+                    Assertions.assertEquals(entity.utilDate, loadedEntity.utilDate);
+                    Assertions.assertEquals(entity.utilDateAsDate, loadedEntity.utilDateAsDate);
+                    Assertions.assertEquals(entity.utilDateAsTime, loadedEntity.utilDateAsTime);
+                    Assertions.assertEquals(entity.utilDateAsTimestamp, loadedEntity.utilDateAsTimestamp);
+
+                    Assertions.assertEquals(entity.utilCalendar, loadedEntity.utilCalendar);
+                    Assertions.assertEquals(entity.utilCalendarAsDate, loadedEntity.utilCalendarAsDate);
+                    Assertions.assertEquals(entity.utilCalendarAsTimestamp, loadedEntity.utilCalendarAsTimestamp);
+
+                    Assertions.assertEquals(entity.myLocalTime, loadedEntity.myLocalTime);
+                    Assertions.assertEquals(entity.localDate, loadedEntity.localDate);
+                    Assertions.assertEquals(entity.localDateTime, loadedEntity.localDateTime);
+
+                    Assertions.assertEquals(entity.offsetTime, loadedEntity.offsetTime);
+                    // doesn't work: we store in +2 and get the right time back, but in UTC
+//                    Assertions.assertEquals(entity.offsetDateTime, loadedEntity.offsetDateTime);
 
                     return "OK";
                 });

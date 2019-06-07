@@ -3,8 +3,12 @@ package io.quarkus.panache.rx.deployment;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import javax.persistence.Temporal;
+
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.Type;
 import org.jboss.jandex.Type.Kind;
@@ -21,11 +25,25 @@ public class EntityField {
     RelationType relationType;
     String reverseField;
     boolean isEnum;
+    private FieldInfo fieldInfo;
 
     private static final DotName DOTNAME_STRING = DotName.createSimple(String.class.getName());
     private static final DotName DOTNAME_BIGDECIMAL = DotName.createSimple(BigDecimal.class.getName());
     private static final DotName DOTNAME_BIGINTEGER = DotName.createSimple(BigInteger.class.getName());
-    
+
+    private static final DotName DOTNAME_SQL_DATE = DotName.createSimple(java.sql.Date.class.getName());
+    private static final DotName DOTNAME_SQL_TIME = DotName.createSimple(java.sql.Time.class.getName());
+    private static final DotName DOTNAME_SQL_TIMESTAMP = DotName.createSimple(java.sql.Timestamp.class.getName());
+    private static final DotName DOTNAME_UTIL_DATE = DotName.createSimple(java.util.Date.class.getName());
+    private static final DotName DOTNAME_UTIL_CALENDAR = DotName.createSimple(java.util.Calendar.class.getName());
+
+    private static final DotName DOTNAME_LOCALTIME = DotName.createSimple(java.time.LocalTime.class.getName());
+    private static final DotName DOTNAME_LOCALDATE = DotName.createSimple(java.time.LocalDate.class.getName());
+    private static final DotName DOTNAME_LOCALDATETIME = DotName.createSimple(java.time.LocalDateTime.class.getName());
+    private static final DotName DOTNAME_OFFSETTIME = DotName.createSimple(java.time.OffsetTime.class.getName());
+    private static final DotName DOTNAME_OFFSETDATETIME = DotName.createSimple(java.time.OffsetDateTime.class.getName());
+
+
     private static final DotName DOTNAME_BOXED_BOOLEAN = DotName.createSimple(Boolean.class.getName());
     private static final DotName DOTNAME_BOOLEAN = DotName.createSimple(Boolean.TYPE.getName());
     private static final DotName DOTNAME_BOXED_BYTE = DotName.createSimple(Byte.class.getName());
@@ -43,23 +61,26 @@ public class EntityField {
     private static final DotName DOTNAME_BOXED_CHARACTER = DotName.createSimple(Character.class.getName());
     private static final DotName DOTNAME_CHARACTER = DotName.createSimple(Character.TYPE.getName());
 
-    public EntityField(String name, Type type, IndexView index) {
-        this.name = name;
-        this.type = type;
+    private static final DotName DOTNAME_TEMPORAL = DotName.createSimple(Temporal.class.getName());
+
+    public EntityField(FieldInfo fieldInfo, IndexView index) {
+        this.fieldInfo = fieldInfo;
+        this.name = fieldInfo.name();
+        this.type = fieldInfo.type();
         this.typeDescriptor = DescriptorUtils.typeToString(type);
         ClassInfo typeClass = index.getClassByName(type.name());
         // FIXME: is this right?
         this.isEnum = typeClass != null ? ((typeClass.flags() & Opcodes.ACC_ENUM) != 0) : false;
     }
 
-    public EntityField(String name, Type type, IndexView index, Type entityClass) {
-        this(name, type, index);
+    public EntityField(FieldInfo fieldInfo, IndexView index, Type entityClass) {
+        this(fieldInfo, index);
         this.relationType = RelationType.ONE;
         this.entityClass = entityClass;
     }
 
-    public EntityField(String name, Type type, IndexView index, Type entityClass, String mappedBy) {
-        this(name, type, index);
+    public EntityField(FieldInfo fieldInfo, IndexView index, Type entityClass, String mappedBy) {
+        this(fieldInfo, index);
         this.relationType = RelationType.MANY;
         this.entityClass = entityClass;
         this.reverseField = mappedBy;
@@ -108,6 +129,49 @@ public class EntityField {
             return "getBigDecimal";
         if (typeName.equals(DOTNAME_BIGINTEGER))
             return "getBigInteger";
+        
+        if (typeName.equals(DOTNAME_SQL_DATE))
+            return "getSqlDate";
+        if (typeName.equals(DOTNAME_SQL_TIME))
+            return "getSqlTime";
+        if (typeName.equals(DOTNAME_SQL_TIMESTAMP))
+            return "getSqlTimestamp";
+
+        if (typeName.equals(DOTNAME_UTIL_DATE)) {
+            AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
+            if(temporal == null)
+                return "getUtilDateAsTimestamp";
+            String value = temporal.value().asEnum();
+            if(value.equals("DATE"))
+                return "getUtilDateAsDate";
+            if(value.equals("TIME"))
+                return "getUtilDateAsTime";
+            return "getUtilDateAsTimestamp";
+        }
+
+        if (typeName.equals(DOTNAME_UTIL_CALENDAR)) {
+            AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
+            if(temporal == null)
+                return "getUtilCalendarAsTimestamp";
+            String value = temporal.value().asEnum();
+            if(value.equals("DATE"))
+                return "getUtilCalendarAsDate";
+            if(value.equals("TIME"))
+                return "getUtilCalendarAsTime";
+            return "getUtilCalendarAsTimestamp";
+        }
+
+        if (typeName.equals(DOTNAME_LOCALDATE))
+            return "getLocalDate";
+        if (typeName.equals(DOTNAME_LOCALTIME))
+            return "getLocalTime";
+        if (typeName.equals(DOTNAME_LOCALDATETIME))
+            return "getLocalDateTime";
+        if (typeName.equals(DOTNAME_OFFSETTIME))
+            return "getOffsetTime";
+        if (typeName.equals(DOTNAME_OFFSETDATETIME))
+            return "getOffsetDateTime";
+
         throw new RuntimeException("Field type not supported yet: " + type + " for field " + name);
     }
 
@@ -165,6 +229,34 @@ public class EntityField {
             return "storeCharacter";
         if (typeName.equals(DOTNAME_BOXED_CHARACTER))
             return "storeBoxedCharacter";
+        if (typeName.equals(DOTNAME_SQL_DATE))
+            return "storeSqlDate";
+        if (typeName.equals(DOTNAME_SQL_TIME))
+            return "storeSqlTime";
+        if (typeName.equals(DOTNAME_SQL_TIMESTAMP))
+            return "storeSqlTimestamp";
+        if (typeName.equals(DOTNAME_UTIL_DATE)) {
+            AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
+            if(temporal == null)
+                return "storeUtilDateAsTimestamp";
+            String value = temporal.value().asEnum();
+            if(value.equals("DATE"))
+                return "storeUtilDateAsDate";
+            if(value.equals("TIME"))
+                return "storeUtilDateAsTime";
+            return "storeUtilDateAsTimestamp";
+        }
+        if (typeName.equals(DOTNAME_UTIL_CALENDAR)) {
+            AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
+            if(temporal == null)
+                return "storeUtilCalendarAsTimestamp";
+            String value = temporal.value().asEnum();
+            if(value.equals("DATE"))
+                return "storeUtilCalendarAsDate";
+            if(value.equals("TIME"))
+                return "storeUtilCalendarAsTime";
+            return "storeUtilCalendarAsTimestamp";
+        }
         if (isEnum)
             return "storeEnum";
         return null;

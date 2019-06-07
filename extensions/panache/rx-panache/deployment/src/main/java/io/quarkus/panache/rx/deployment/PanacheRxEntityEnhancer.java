@@ -348,15 +348,15 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
                 if (fieldInfo.hasAnnotation(DOTNAME_MANY_TO_ONE)) {
                     // FIXME: that stinks
                     Type entityType = fieldInfo.type().asParameterizedType().arguments().get(0);
-                    fields.put(name, new EntityField(name, fieldInfo.type(), index, entityType));
+                    fields.put(name, new EntityField(fieldInfo, index, entityType));
                 } else if (fieldInfo.hasAnnotation(DOTNAME_ONE_TO_MANY)) {
                     // FIXME: that stinks
                     Type entityType = fieldInfo.type().asParameterizedType().arguments().get(0);
                     AnnotationInstance oneToMany = fieldInfo.annotation(DOTNAME_ONE_TO_MANY);
                     fields.put(name,
-                            new EntityField(name, fieldInfo.type(), index, entityType, oneToMany.value("mappedBy").asString()));
+                            new EntityField(fieldInfo, index, entityType, oneToMany.value("mappedBy").asString()));
                 } else {
-                    EntityField field = new EntityField(name, fieldInfo.type(), index);
+                    EntityField field = new EntityField(fieldInfo, index);
                     if (fieldInfo.hasAnnotation(DOTNAME_ID)) {
                         idField = field;
                     }

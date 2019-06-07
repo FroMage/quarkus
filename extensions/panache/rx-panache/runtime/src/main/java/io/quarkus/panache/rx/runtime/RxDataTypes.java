@@ -2,6 +2,14 @@ package io.quarkus.panache.rx.runtime;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.ZoneId;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -115,5 +123,121 @@ public class RxDataTypes {
 
     public static BigDecimal getBigDecimal(Row row, String column) {
         return row.getBigDecimal(column);
+    }
+
+    public static java.sql.Date getSqlDate(Row row, String column) {
+        LocalDate localDate = row.getLocalDate(column);
+        return localDate == null ? null : java.sql.Date.valueOf(localDate);
+    }
+
+    public static Object storeSqlDate(java.sql.Date date) {
+        // FIXME: remove unwanted time info?
+        return date == null ? null : date.toLocalDate();
+    }
+
+    public static java.sql.Time getSqlTime(Row row, String column) {
+        LocalTime localTime = row.getLocalTime(column);
+        return localTime == null ? null : java.sql.Time.valueOf(localTime);
+    }
+
+    public static Object storeSqlTime(java.sql.Time time) {
+        // FIXME: remove unwanted time info?
+        return time == null ? null : time.toLocalTime();
+    }
+
+    public static java.sql.Timestamp getSqlTimestamp(Row row, String column) {
+        LocalDateTime localDateTime = row.getLocalDateTime(column);
+        return localDateTime == null ? null : java.sql.Timestamp.valueOf(localDateTime);
+    }
+
+    public static Object storeSqlTimestamp(java.sql.Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toLocalDateTime();
+    }
+
+    public static java.util.Date getUtilDateAsDate(Row row, String column) {
+        return getSqlDate(row, column);
+    }
+
+    public static java.util.Date getUtilDateAsTime(Row row, String column) {
+        return getSqlTime(row, column);
+    }
+
+    public static java.util.Date getUtilDateAsTimestamp(Row row, String column) {
+        return getSqlTimestamp(row, column);
+    }
+
+    public static Object storeUtilDateAsDate(java.util.Date date) {
+        // FIXME: remove unwanted time info?
+        return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    public static Object storeUtilDateAsTime(java.util.Date date) {
+        // FIXME: remove unwanted date info?
+        return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
+    }
+    
+    public static Object storeUtilDateAsTimestamp(java.util.Date date) {
+        return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+    }
+    
+    public static java.util.Calendar getUtilCalendarAsDate(Row row, String column) {
+        java.util.Date value = getSqlDate(row, column);
+        if(value == null)
+            return null;
+        Calendar ret = GregorianCalendar.getInstance();
+        ret.setTime(value);
+        return ret;
+    }
+
+    public static java.util.Calendar getUtilCalendarAsTime(Row row, String column) {
+        java.util.Date value = getSqlTime(row, column);
+        if(value == null)
+            return null;
+        Calendar ret = GregorianCalendar.getInstance();
+        ret.setTime(value);
+        return ret;
+    }
+
+    public static java.util.Calendar getUtilCalendarAsTimestamp(Row row, String column) {
+        java.util.Date value = getSqlTimestamp(row, column);
+        if(value == null)
+            return null;
+        Calendar ret = GregorianCalendar.getInstance();
+        ret.setTime(value);
+        return ret;
+    }
+
+    public static Object storeUtilCalendarAsDate(java.util.Calendar date) {
+        // FIXME: remove unwanted time info?
+        return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    public static Object storeUtilCalendarAsTime(java.util.Calendar date) {
+        // FIXME: remove unwanted date info?
+        return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
+    }
+    
+    public static Object storeUtilCalendarAsTimestamp(java.util.Calendar date) {
+        return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+    }
+    
+    public static LocalTime getLocalTime(Row row, String column) {
+        return row.getLocalTime(column);
+    }
+
+    public static LocalDateTime getLocalDateTime(Row row, String column) {
+        return row.getLocalDateTime(column);
+    }
+
+    public static LocalDate getLocalDate(Row row, String column) {
+        return row.getLocalDate(column);
+    }
+
+    public static OffsetTime getOffsetTime(Row row, String column) {
+        return row.getOffsetTime(column);
+    }
+
+    public static OffsetDateTime getOffsetDateTime(Row row, String column) {
+        return row.getOffsetDateTime(column);
     }
 }
