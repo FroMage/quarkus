@@ -8,6 +8,7 @@ import java.util.concurrent.CompletionStage;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.RxModelInfo;
 import io.reactiverse.axle.pgclient.Row;
+import io.reactiverse.pgclient.data.Numeric;
 
 public class RxDataTypes {
 
@@ -108,7 +109,8 @@ public class RxDataTypes {
     }
 
     public static BigInteger getBigInteger(Row row, String column) {
-        return row.getNumeric(column).bigIntegerValue();
+        Numeric numeric = row.getNumeric(column);
+        return numeric == null ? null : numeric.bigIntegerValue();
     }
 
     public static BigDecimal getBigDecimal(Row row, String column) {
