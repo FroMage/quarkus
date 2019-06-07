@@ -84,8 +84,8 @@ public class RxDataTypeEntity extends PanacheRxEntity<RxDataTypeEntity> {
 
     public LocalDateTime localDateTime;
     public LocalDate localDate;
-    // FIXME support renaming columns
-    public LocalTime myLocalTime;
+    @Column(name = "myLocalTime")
+    public LocalTime localTime;
     
     @Column(columnDefinition = "timestamp with time zone")
     public OffsetDateTime offsetDateTime;

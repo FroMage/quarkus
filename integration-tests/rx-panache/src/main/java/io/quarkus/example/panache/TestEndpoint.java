@@ -1168,7 +1168,7 @@ public class TestEndpoint {
         entity.utilCalendarAsTimestamp.setTime(entity.utilDateAsTimestamp);
         
         entity.localDate = LocalDate.now();
-        entity.myLocalTime = LocalTime.now();
+        entity.localTime = LocalTime.now();
         entity.localDateTime = LocalDateTime.now();
         
         entity.offsetTime = OffsetTime.now();
@@ -1221,7 +1221,7 @@ public class TestEndpoint {
                     Assertions.assertEquals(entity.utilCalendarAsDate, loadedEntity.utilCalendarAsDate);
                     Assertions.assertEquals(entity.utilCalendarAsTimestamp, loadedEntity.utilCalendarAsTimestamp);
 
-                    Assertions.assertEquals(entity.myLocalTime, loadedEntity.myLocalTime);
+                    Assertions.assertEquals(entity.localTime, loadedEntity.localTime);
                     Assertions.assertEquals(entity.localDate, loadedEntity.localDate);
                     Assertions.assertEquals(entity.localDateTime, loadedEntity.localDateTime);
 

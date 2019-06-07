@@ -3,9 +3,11 @@ package io.quarkus.panache.rx.deployment;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import javax.persistence.Column;
 import javax.persistence.Temporal;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
@@ -26,6 +28,7 @@ public class EntityField {
     String reverseField;
     boolean isEnum;
     private FieldInfo fieldInfo;
+    private String columnName;
 
     private static final DotName DOTNAME_STRING = DotName.createSimple(String.class.getName());
     private static final DotName DOTNAME_BIGDECIMAL = DotName.createSimple(BigDecimal.class.getName());
@@ -62,10 +65,17 @@ public class EntityField {
     private static final DotName DOTNAME_CHARACTER = DotName.createSimple(Character.TYPE.getName());
 
     private static final DotName DOTNAME_TEMPORAL = DotName.createSimple(Temporal.class.getName());
+    private static final DotName DOTNAME_COLUMN = DotName.createSimple(Column.class.getName());
 
     public EntityField(FieldInfo fieldInfo, IndexView index) {
         this.fieldInfo = fieldInfo;
         this.name = fieldInfo.name();
+        AnnotationInstance column = fieldInfo.annotation(DOTNAME_COLUMN);
+        if(column != null) {
+            AnnotationValue value = column.value("name");
+            if(value != null)
+                this.columnName = value.asString(); 
+        }
         this.type = fieldInfo.type();
         this.typeDescriptor = DescriptorUtils.typeToString(type);
         ClassInfo typeClass = index.getClassByName(type.name());
@@ -193,6 +203,8 @@ public class EntityField {
     }
 
     public String columnName() {
+        if(columnName != null)
+            return columnName.toLowerCase();
         // FIXME: should be locale-independent
         if (isManyToOne())
             return name.toLowerCase() + "_id";
