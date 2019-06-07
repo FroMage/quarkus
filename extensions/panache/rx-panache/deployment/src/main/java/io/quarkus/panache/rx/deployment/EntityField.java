@@ -1,5 +1,8 @@
 package io.quarkus.panache.rx.deployment;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
@@ -20,6 +23,9 @@ public class EntityField {
     boolean isEnum;
 
     private static final DotName DOTNAME_STRING = DotName.createSimple(String.class.getName());
+    private static final DotName DOTNAME_BIGDECIMAL = DotName.createSimple(BigDecimal.class.getName());
+    private static final DotName DOTNAME_BIGINTEGER = DotName.createSimple(BigInteger.class.getName());
+    
     private static final DotName DOTNAME_BOXED_BOOLEAN = DotName.createSimple(Boolean.class.getName());
     private static final DotName DOTNAME_BOOLEAN = DotName.createSimple(Boolean.TYPE.getName());
     private static final DotName DOTNAME_BOXED_BYTE = DotName.createSimple(Byte.class.getName());
@@ -61,8 +67,10 @@ public class EntityField {
 
     public String getFromRowMethod() {
         DotName typeName = type.name();
+        // FIXME: this looks like we should just default to get+typeName
         if (typeName.equals(DOTNAME_STRING))
             return "getString";
+        
         if (typeName.equals(DOTNAME_BYTE))
             return "getByte";
         if (typeName.equals(DOTNAME_BOXED_BYTE))
@@ -95,6 +103,11 @@ public class EntityField {
             return "getDouble";
         if (typeName.equals(DOTNAME_BOXED_DOUBLE))
             return "getBoxedDouble";
+
+        if (typeName.equals(DOTNAME_BIGDECIMAL))
+            return "getBigDecimal";
+        if (typeName.equals(DOTNAME_BIGINTEGER))
+            return "getBigInteger";
         throw new RuntimeException("Field type not supported yet: " + type + " for field " + name);
     }
 

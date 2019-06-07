@@ -1,5 +1,7 @@
 package io.quarkus.panache.rx.runtime;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -103,5 +105,13 @@ public class RxDataTypes {
         if (id == null)
             return CompletableFuture.completedFuture(null);
         return (CompletionStage<T>) RxOperations.deferCompletionStage(() -> RxOperations.findById(modelInfo, id));
+    }
+
+    public static BigInteger getBigInteger(Row row, String column) {
+        return row.getNumeric(column).bigIntegerValue();
+    }
+
+    public static BigDecimal getBigDecimal(Row row, String column) {
+        return row.getBigDecimal(column);
     }
 }

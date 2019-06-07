@@ -32,9 +32,9 @@ public class RxDataTypeEntity extends PanacheRxEntity<RxDataTypeEntity> {
     public Double boxedDouble;
     
     public String string;
-//
-//    public BigInteger bigInteger;
-//    public BigDecimal bigDecimal;
+
+    public BigInteger bigInteger;
+    public BigDecimal bigDecimal;
 //
 //    // date
 //    public java.sql.Date sqlDate;

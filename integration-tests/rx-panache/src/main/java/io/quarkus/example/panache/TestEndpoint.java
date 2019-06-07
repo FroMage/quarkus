@@ -16,6 +16,8 @@
 
 package io.quarkus.example.panache;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -1135,6 +1137,9 @@ public class TestEndpoint {
         entity.boxedDouble = 13.0;
         
         entity.string = "asd";
+        
+        entity.bigDecimal = BigDecimal.ONE;
+        entity.bigInteger = BigInteger.TEN;
 
         return entity.save()
                 .thenCompose(savedEntity -> RxDataTypeEntity.<RxDataTypeEntity>findById(savedEntity.id))
@@ -1165,6 +1170,9 @@ public class TestEndpoint {
                     Assertions.assertEquals(entity.boxedDouble, loadedEntity.boxedDouble);
 
                     Assertions.assertEquals(entity.string, loadedEntity.string);
+
+                    Assertions.assertEquals(entity.bigDecimal.stripTrailingZeros(), loadedEntity.bigDecimal.stripTrailingZeros());
+                    Assertions.assertEquals(entity.bigInteger, loadedEntity.bigInteger);
 
                     return "OK";
                 });
