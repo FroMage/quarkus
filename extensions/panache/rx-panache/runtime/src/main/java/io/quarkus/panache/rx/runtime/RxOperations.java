@@ -65,19 +65,12 @@ public class RxOperations {
     }
 
     private static <V> CompletionStage<V> attachStackTrace(CompletionStage<V> cs) {
-        Throwable exception = new Exception().fillInStackTrace();
+        Throwable exception = new RxException("Rx operation failed");
         return cs.exceptionally(x -> {
-            fillInCause(x, exception);
-            rethrow(x);
+            exception.initCause(x);
+            rethrow(exception);
             return null;
         });
-    }
-
-    private static void fillInCause(Throwable x, Throwable cause) {
-        while(x.getCause() != null){
-            x = x.getCause();
-        }
-        x.initCause(cause);
     }
 
     // Used by generated model
