@@ -61,7 +61,7 @@ public class RxOperations {
     }
 
     private static <T extends Throwable> void rethrow(Throwable x) throws T {
-        throw (T)x;
+        throw (T) x;
     }
 
     private static <V> CompletionStage<V> attachStackTrace(CompletionStage<V> cs) {

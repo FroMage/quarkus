@@ -128,7 +128,7 @@ public final class PanacheRxResourceProcessor {
                 }
             }
         }
-        
+
         Set<String> allModelClasses = new HashSet<>(rxModelClasses);
         allModelClasses.add(PanacheRxEntity.class.getName());
         return new ModelClassesBuildItem(allModelClasses);
@@ -137,8 +137,8 @@ public final class PanacheRxResourceProcessor {
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     void configure(PanacheRxConfig config,
-                   DataSourceConfig dataSourceConfig,
-                   ModelClassesBuildItem modelClasses,
+            DataSourceConfig dataSourceConfig,
+            ModelClassesBuildItem modelClasses,
             PgPoolImporterTemplate template,
             ApplicationArchivesBuildItem applicationArchivesBuildItem,
             ArchiveRootBuildItem root,
@@ -168,11 +168,11 @@ public final class PanacheRxResourceProcessor {
                 });
 
         // FIXME: same defaults as reactivepgclient
-        template.updateSchema(modelClasses.modelClasses, 
-                              dataSourceConfig.url.orElse(null), 
-                              dataSourceConfig.username.orElse(null), 
-                              dataSourceConfig.password.orElse(null));
-        
+        template.updateSchema(modelClasses.modelClasses,
+                dataSourceConfig.url.orElse(null),
+                dataSourceConfig.username.orElse(null),
+                dataSourceConfig.password.orElse(null));
+
         //raise exception if explicit file is not present (i.e. not the default)
         config.sqlLoadScript
                 .filter(o -> !loadScriptPath.filter(path -> !Files.isDirectory(path)).isPresent())

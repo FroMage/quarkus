@@ -72,13 +72,13 @@ public class PgPoolImporterTemplate {
         Map<String, String> settings = new HashMap<>();
         settings.put(Environment.DRIVER, "org.postgresql.Driver");
         settings.put(Environment.DIALECT, "org.hibernate.dialect.PostgreSQL95Dialect");
-        String jdbcUrl = "jdbc:"+url.substring("vertx-reactive:".length());
+        String jdbcUrl = "jdbc:" + url.substring("vertx-reactive:".length());
         settings.put(Environment.URL, jdbcUrl);
         settings.put(Environment.USER, user);
         settings.put(Environment.PASS, pass);
         settings.put(Environment.HBM2DDL_AUTO, "create");
         settings.put(Environment.SHOW_SQL, "true");
- 
+
         MetadataSources metadata = new MetadataSources(
                 new StandardServiceRegistryBuilder()
                         .applySettings(settings)
@@ -94,7 +94,7 @@ public class PgPoolImporterTemplate {
         schemaExport.setHaltOnError(true);
         schemaExport.setFormat(true);
         schemaExport.setDelimiter(";");
-//        schemaExport.setOutputFile("db-schema.sql");
+        //        schemaExport.setOutputFile("db-schema.sql");
         schemaExport.create(EnumSet.of(TargetType.DATABASE), metadata.buildMetadata());
     }
 

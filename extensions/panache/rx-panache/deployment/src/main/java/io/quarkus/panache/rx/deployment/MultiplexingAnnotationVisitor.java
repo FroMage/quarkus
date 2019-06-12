@@ -3,7 +3,6 @@ package io.quarkus.panache.rx.deployment;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Opcodes;
 
-
 public class MultiplexingAnnotationVisitor extends AnnotationVisitor {
 
     private AnnotationVisitor fakeAnnotationVisitor;
@@ -18,23 +17,24 @@ public class MultiplexingAnnotationVisitor extends AnnotationVisitor {
         fakeAnnotationVisitor.visit(name, value);
         super.visit(name, value);
     }
-    
+
     @Override
     public AnnotationVisitor visitAnnotation(String name, String descriptor) {
-        return new MultiplexingAnnotationVisitor(fakeAnnotationVisitor.visitAnnotation(name, descriptor), super.visitAnnotation(name, descriptor));
+        return new MultiplexingAnnotationVisitor(fakeAnnotationVisitor.visitAnnotation(name, descriptor),
+                super.visitAnnotation(name, descriptor));
     }
-    
+
     @Override
     public AnnotationVisitor visitArray(String name) {
         return new MultiplexingAnnotationVisitor(fakeAnnotationVisitor.visitArray(name), super.visitArray(name));
     }
-    
+
     @Override
     public void visitEnd() {
         fakeAnnotationVisitor.visitEnd();
         super.visitEnd();
     }
-    
+
     @Override
     public void visitEnum(String name, String descriptor, String value) {
         fakeAnnotationVisitor.visitEnum(name, descriptor, value);

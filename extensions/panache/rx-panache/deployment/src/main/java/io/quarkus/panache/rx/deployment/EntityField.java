@@ -46,7 +46,6 @@ public class EntityField {
     private static final DotName DOTNAME_OFFSETTIME = DotName.createSimple(java.time.OffsetTime.class.getName());
     private static final DotName DOTNAME_OFFSETDATETIME = DotName.createSimple(java.time.OffsetDateTime.class.getName());
 
-
     private static final DotName DOTNAME_BOXED_BOOLEAN = DotName.createSimple(Boolean.class.getName());
     private static final DotName DOTNAME_BOOLEAN = DotName.createSimple(Boolean.TYPE.getName());
     private static final DotName DOTNAME_BOXED_BYTE = DotName.createSimple(Byte.class.getName());
@@ -71,10 +70,10 @@ public class EntityField {
         this.fieldInfo = fieldInfo;
         this.name = fieldInfo.name();
         AnnotationInstance column = fieldInfo.annotation(DOTNAME_COLUMN);
-        if(column != null) {
+        if (column != null) {
             AnnotationValue value = column.value("name");
-            if(value != null)
-                this.columnName = value.asString(); 
+            if (value != null)
+                this.columnName = value.asString();
         }
         this.type = fieldInfo.type();
         this.typeDescriptor = DescriptorUtils.typeToString(type);
@@ -101,7 +100,7 @@ public class EntityField {
         // FIXME: this looks like we should just default to get+typeName
         if (typeName.equals(DOTNAME_STRING))
             return "getString";
-        
+
         if (typeName.equals(DOTNAME_BYTE))
             return "getByte";
         if (typeName.equals(DOTNAME_BOXED_BYTE))
@@ -139,7 +138,7 @@ public class EntityField {
             return "getBigDecimal";
         if (typeName.equals(DOTNAME_BIGINTEGER))
             return "getBigInteger";
-        
+
         if (typeName.equals(DOTNAME_SQL_DATE))
             return "getSqlDate";
         if (typeName.equals(DOTNAME_SQL_TIME))
@@ -149,24 +148,24 @@ public class EntityField {
 
         if (typeName.equals(DOTNAME_UTIL_DATE)) {
             AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
-            if(temporal == null)
+            if (temporal == null)
                 return "getUtilDateAsTimestamp";
             String value = temporal.value().asEnum();
-            if(value.equals("DATE"))
+            if (value.equals("DATE"))
                 return "getUtilDateAsDate";
-            if(value.equals("TIME"))
+            if (value.equals("TIME"))
                 return "getUtilDateAsTime";
             return "getUtilDateAsTimestamp";
         }
 
         if (typeName.equals(DOTNAME_UTIL_CALENDAR)) {
             AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
-            if(temporal == null)
+            if (temporal == null)
                 return "getUtilCalendarAsTimestamp";
             String value = temporal.value().asEnum();
-            if(value.equals("DATE"))
+            if (value.equals("DATE"))
                 return "getUtilCalendarAsDate";
-            if(value.equals("TIME"))
+            if (value.equals("TIME"))
                 return "getUtilCalendarAsTime";
             return "getUtilCalendarAsTimestamp";
         }
@@ -203,7 +202,7 @@ public class EntityField {
     }
 
     public String columnName() {
-        if(columnName != null)
+        if (columnName != null)
             return columnName.toLowerCase();
         // FIXME: should be locale-independent
         if (isManyToOne())
@@ -249,23 +248,23 @@ public class EntityField {
             return "storeSqlTimestamp";
         if (typeName.equals(DOTNAME_UTIL_DATE)) {
             AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
-            if(temporal == null)
+            if (temporal == null)
                 return "storeUtilDateAsTimestamp";
             String value = temporal.value().asEnum();
-            if(value.equals("DATE"))
+            if (value.equals("DATE"))
                 return "storeUtilDateAsDate";
-            if(value.equals("TIME"))
+            if (value.equals("TIME"))
                 return "storeUtilDateAsTime";
             return "storeUtilDateAsTimestamp";
         }
         if (typeName.equals(DOTNAME_UTIL_CALENDAR)) {
             AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
-            if(temporal == null)
+            if (temporal == null)
                 return "storeUtilCalendarAsTimestamp";
             String value = temporal.value().asEnum();
-            if(value.equals("DATE"))
+            if (value.equals("DATE"))
                 return "storeUtilCalendarAsDate";
-            if(value.equals("TIME"))
+            if (value.equals("TIME"))
                 return "storeUtilCalendarAsTime";
             return "storeUtilCalendarAsTimestamp";
         }

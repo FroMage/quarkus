@@ -9,7 +9,7 @@ public final class ModelClassesBuildItem extends SimpleBuildItem {
     public final Set<String> modelClasses;
 
     public ModelClassesBuildItem(Set<String> modelClasses) {
-        this.modelClasses = modelClasses; 
+        this.modelClasses = modelClasses;
     }
 
 }

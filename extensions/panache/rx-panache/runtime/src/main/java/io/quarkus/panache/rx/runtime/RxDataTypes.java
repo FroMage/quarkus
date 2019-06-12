@@ -175,14 +175,14 @@ public class RxDataTypes {
         // FIXME: remove unwanted date info?
         return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
     }
-    
+
     public static Object storeUtilDateAsTimestamp(java.util.Date date) {
         return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
-    
+
     public static java.util.Calendar getUtilCalendarAsDate(Row row, String column) {
         java.util.Date value = getSqlDate(row, column);
-        if(value == null)
+        if (value == null)
             return null;
         Calendar ret = GregorianCalendar.getInstance();
         ret.setTime(value);
@@ -191,7 +191,7 @@ public class RxDataTypes {
 
     public static java.util.Calendar getUtilCalendarAsTime(Row row, String column) {
         java.util.Date value = getSqlTime(row, column);
-        if(value == null)
+        if (value == null)
             return null;
         Calendar ret = GregorianCalendar.getInstance();
         ret.setTime(value);
@@ -200,7 +200,7 @@ public class RxDataTypes {
 
     public static java.util.Calendar getUtilCalendarAsTimestamp(Row row, String column) {
         java.util.Date value = getSqlTimestamp(row, column);
-        if(value == null)
+        if (value == null)
             return null;
         Calendar ret = GregorianCalendar.getInstance();
         ret.setTime(value);
@@ -216,11 +216,11 @@ public class RxDataTypes {
         // FIXME: remove unwanted date info?
         return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
     }
-    
+
     public static Object storeUtilCalendarAsTimestamp(java.util.Calendar date) {
         return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
-    
+
     public static LocalTime getLocalTime(Row row, String column) {
         return row.getLocalTime(column);
     }
