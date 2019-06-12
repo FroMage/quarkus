@@ -16,6 +16,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.signature.SignatureReader;
 
+import io.quarkus.panache.common.deployment.JandexUtil;
 import io.quarkus.panache.rx.PanacheRxRepository;
 import io.quarkus.panache.rx.PanacheRxRepositoryBase;
 

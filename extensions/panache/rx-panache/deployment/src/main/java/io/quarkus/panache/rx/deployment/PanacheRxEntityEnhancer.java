@@ -31,6 +31,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.TypePath;
 
 import io.quarkus.gizmo.DescriptorUtils;
+import io.quarkus.panache.common.deployment.JandexUtil;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.RxModelInfo;
 import io.quarkus.panache.rx.runtime.RxOperations;
@@ -276,28 +277,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
                     mv.visitCode();
                     mv.visitIntInsn(Opcodes.ALOAD, 0);
                     mv.visitFieldInsn(Opcodes.GETFIELD, thisBinaryName, field.name, field.typeDescriptor);
-                    int returnCode;
-                    switch (field.typeDescriptor) {
-                        case "Z":
-                        case "B":
-                        case "C":
-                        case "S":
-                        case "I":
-                            returnCode = Opcodes.IRETURN;
-                            break;
-                        case "J":
-                            returnCode = Opcodes.LRETURN;
-                            break;
-                        case "F":
-                            returnCode = Opcodes.FRETURN;
-                            break;
-                        case "D":
-                            returnCode = Opcodes.DRETURN;
-                            break;
-                        default:
-                            returnCode = Opcodes.ARETURN;
-                            break;
-                    }
+                    int returnCode = JandexUtil.getReturnInstruction(field.typeDescriptor);
                     mv.visitInsn(returnCode);
                     mv.visitMaxs(0, 0);
                     mv.visitEnd();

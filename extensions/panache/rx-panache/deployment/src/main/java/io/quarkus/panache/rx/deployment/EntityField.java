@@ -17,6 +17,7 @@ import org.jboss.jandex.Type.Kind;
 import org.objectweb.asm.Opcodes;
 
 import io.quarkus.gizmo.DescriptorUtils;
+import io.quarkus.panache.common.deployment.JavaBeanUtil;
 
 public class EntityField {
 
