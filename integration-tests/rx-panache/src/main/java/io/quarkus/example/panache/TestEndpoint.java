@@ -42,7 +42,7 @@ public class TestEndpoint {
     @Path("rx-model")
     public CompletionStage<String> testRxModel() {
 
-        return toList(RxPerson.findAll())
+        return RxPerson.listAll()
                 .thenCompose(persons -> {
                     Assertions.assertEquals(0, persons.size());
 
@@ -50,7 +50,7 @@ public class TestEndpoint {
                 }).thenCompose(person -> {
                     Assertions.assertNotNull(person.id);
 
-                    return toList(RxPerson.findAll())
+                    return RxPerson.listAll()
                             .thenCompose(persons -> {
                                 Assertions.assertEquals(1, persons.size());
                                 Assertions.assertEquals(person, persons.get(0));
@@ -59,12 +59,12 @@ public class TestEndpoint {
                             }).thenCompose(byId -> {
                                 Assertions.assertEquals(person, byId);
 
-                                return toList(RxPerson.find("name = ?1", "stef"));
+                                return RxPerson.list("name = ?1", "stef");
                             }).thenCompose(persons -> {
                                 Assertions.assertEquals(1, persons.size());
                                 Assertions.assertEquals(person, persons.get(0));
 
-                                return toList(RxPerson.find("name", "emmanuel"));
+                                return RxPerson.list("name", "emmanuel");
                             }).thenCompose(persons -> {
                                 Assertions.assertEquals(0, persons.size());
 
@@ -160,7 +160,7 @@ public class TestEndpoint {
     @Path("rx-model-dao")
     public CompletionStage<String> testRxModelDao() {
         System.err.println("A: CL: " + Thread.currentThread().getContextClassLoader());
-        return toList(rxPersonRepository.findAll())
+        return rxPersonRepository.listAll()
                 .thenCompose(persons -> {
                     Assertions.assertEquals(0, persons.size());
 
@@ -170,7 +170,7 @@ public class TestEndpoint {
                     Assertions.assertNotNull(person.id);
                     System.err.println("C");
 
-                    return toList(rxPersonRepository.findAll())
+                    return rxPersonRepository.listAll()
                             .thenCompose(persons -> {
                                 Assertions.assertEquals(1, persons.size());
                                 Assertions.assertEquals(person, persons.get(0));
@@ -181,13 +181,13 @@ public class TestEndpoint {
                                 Assertions.assertEquals(person, byId);
 
                                 System.err.println("E");
-                                return toList(rxPersonRepository.find("name = ?1", "stef"));
+                                return rxPersonRepository.list("name = ?1", "stef");
                             }).thenCompose(persons -> {
                                 Assertions.assertEquals(1, persons.size());
                                 Assertions.assertEquals(person, persons.get(0));
 
                                 System.err.println("F");
-                                return toList(RxPerson.find("name", "emmanuel"));
+                                return rxPersonRepository.list("name", "emmanuel");
                             }).thenCompose(persons -> {
                                 Assertions.assertEquals(0, persons.size());
 
