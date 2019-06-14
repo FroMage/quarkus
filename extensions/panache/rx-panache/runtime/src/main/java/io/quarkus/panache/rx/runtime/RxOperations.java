@@ -248,14 +248,11 @@ public class RxOperations {
     }
 
     private static String translateNamedQuery(String query, Map<String, Object> params, Tuple tuple) {
-        System.err.println("Start query: " + query);
         for (Entry<String, Object> entry : params.entrySet()) {
             tuple.addValue(entry.getValue());
             // replace :foo -> $1
-            System.err.println("Replacing :" + entry.getKey() + " with $" + tuple.size());
             query = query.replaceAll(":\\Q" + entry.getKey() + "\\E", "\\$" + tuple.size());
         }
-        System.err.println("End query: " + query);
         return query;
     }
 

@@ -573,7 +573,6 @@ public class TestEndpoint {
     private CompletionStage<? extends RxPerson> makeSavedRxPerson() {
         return makeSavedRxPerson("")
                 .thenCompose(person -> {
-                    System.err.println("Got Person ID " + person.id);
                     RxDog dog = new RxDog("octave", "dalmatian");
                     dog.owner = CompletableFuture.completedFuture(person);
                     person.dogs = ReactiveStreams.of(dog).buildRs();
@@ -1104,7 +1103,6 @@ public class TestEndpoint {
     private CompletionStage<? extends RxPerson> makeSavedRxPersonRepository() {
         return makeSavedRxPersonRepository("")
                 .thenCompose(person -> {
-                    System.err.println("Got Person ID " + person.id);
                     RxDog dog = new RxDog("octave", "dalmatian");
                     dog.owner = CompletableFuture.completedFuture(person);
                     person.dogs = ReactiveStreams.of(dog).buildRs();

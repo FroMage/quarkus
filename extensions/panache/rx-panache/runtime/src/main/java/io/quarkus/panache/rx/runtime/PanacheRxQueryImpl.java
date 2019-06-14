@@ -124,7 +124,6 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
             if (lcQuery.startsWith("select * "))
                 countQueryHql = countQueryHql.substring(9);
             String countQuery = "SELECT COUNT(*) " + countQueryHql;
-            System.err.println("count query: " + countQuery);
             count = pool.preparedQuery(countQuery, params)
                     .thenApply(pgRowSet -> pgRowSet.iterator().next().getLong(0));
         }
