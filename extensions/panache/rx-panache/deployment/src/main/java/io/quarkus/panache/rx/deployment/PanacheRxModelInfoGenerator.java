@@ -192,7 +192,7 @@ public class PanacheRxModelInfoGenerator {
                     ResultHandle enumValues = fromRow.invokeStaticMethod(MethodDescriptor.ofMethod(field.typeClassName(),
                             "values", "[L" + field.typeClassName() + ";"));
 
-                    value = fromRow.invokeStaticMethod(MethodDescriptor.ofMethod(RxDataTypes.class, "getEnum", Enum.class,
+                    value = fromRow.invokeStaticMethod(MethodDescriptor.ofMethod(RxDataTypes.class, field.getFromRowMethod(), Enum.class,
                             Row.class, String.class, Enum[].class),
                             fromRow.getMethodParam(0), fromRow.load(field.columnName()), enumValues);
                 } else if (field.isManyToOne()) {

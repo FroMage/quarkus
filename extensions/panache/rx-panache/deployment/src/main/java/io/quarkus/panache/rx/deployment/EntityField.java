@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import javax.persistence.Column;
+import javax.persistence.Enumerated;
 import javax.persistence.Temporal;
 
 import org.jboss.jandex.AnnotationInstance;
@@ -69,6 +70,7 @@ public class EntityField {
     private static final DotName DOTNAME_BOXED_CHARACTER = DotName.createSimple(Character.class.getName());
     private static final DotName DOTNAME_CHARACTER = DotName.createSimple(Character.TYPE.getName());
 
+    private static final DotName DOTNAME_ENUMERATED = DotName.createSimple(Enumerated.class.getName());
     private static final DotName DOTNAME_TEMPORAL = DotName.createSimple(Temporal.class.getName());
     private static final DotName DOTNAME_COLUMN = DotName.createSimple(Column.class.getName());
 
@@ -196,12 +198,23 @@ public class EntityField {
         if (typeName.equals(DOTNAME_BOXED_CHAR_ARRAY))
             return "getBoxedCharArray";
 
+        if(isEnum) {
+            AnnotationInstance enumerated = fieldInfo.annotation(DOTNAME_ENUMERATED);
+            if(enumerated != null) {
+                AnnotationValue value = enumerated.value();
+                if(value != null && value.kind() == AnnotationValue.Kind.ENUM) {
+                    String enumValue = value.asEnum();
+                    if("STRING".equals(enumValue))
+                        return "getEnumString";
+                }
+            }
+            return "getEnum";
+        }
+
         throw new RuntimeException("Field type not supported yet: " + type + " for field " + name);
     }
 
     public Type mappedType() {
-        if (isEnum)
-            return Type.create(DOTNAME_BOXED_INTEGER, Kind.CLASS);
         // FIXME: ID type
         if (isManyToOne())
             return Type.create(DOTNAME_BOXED_LONG, Kind.CLASS);
@@ -293,8 +306,18 @@ public class EntityField {
         if (typeName.equals(DOTNAME_BOXED_CHAR_ARRAY))
             return "storeBoxedCharArray";
 
-        if (isEnum)
+        if (isEnum) {
+            AnnotationInstance enumerated = fieldInfo.annotation(DOTNAME_ENUMERATED);
+            if(enumerated != null) {
+                AnnotationValue value = enumerated.value();
+                if(value != null && value.kind() == AnnotationValue.Kind.ENUM) {
+                    String enumValue = value.asEnum();
+                    if("STRING".equals(enumValue))
+                        return "storeEnumString";
+                }
+            }
             return "storeEnum";
+        }
         return null;
     }
 

@@ -10,6 +10,8 @@ import java.time.OffsetTime;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
@@ -93,7 +95,17 @@ public class RxDataTypeEntity extends PanacheRxEntity<RxDataTypeEntity> {
     public char[] primitiveCharArray;
     public Character[] boxedCharArray;
 
-    // FIXME: enum, Serializable?
+    public enum Foo {
+        ONE, TWO;
+    }
+    
+    public Foo enumDefault;
+    @Enumerated
+    public Foo enumOrdinal;
+    @Enumerated(EnumType.STRING)
+    public Foo enumString;
+    
+    // FIXME: Serializable?
     // FIXME: Blob, Clob, Struct, Ref, Array, URL
     // FIXME: Embedded?, ManyToMany, arrays, Maps, Collections
 }

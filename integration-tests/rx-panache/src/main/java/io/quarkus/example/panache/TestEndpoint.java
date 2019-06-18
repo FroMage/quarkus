@@ -1174,6 +1174,10 @@ public class TestEndpoint {
         entity.boxedByteArray = new Byte[] {0, 1, 2};
         entity.primitiveCharArray = new char[] {'a', 'b', 'c'};
         entity.boxedCharArray = new Character[] {'a', 'b', 'c'};
+
+        entity.enumDefault = RxDataTypeEntity.Foo.ONE;
+        entity.enumOrdinal = RxDataTypeEntity.Foo.ONE;
+        entity.enumString = RxDataTypeEntity.Foo.ONE;
         
         return entity.save()
                 .thenCompose(savedEntity -> RxDataTypeEntity.<RxDataTypeEntity> findById(savedEntity.id))
@@ -1235,6 +1239,10 @@ public class TestEndpoint {
 
                     Assertions.assertArrayEquals(entity.primitiveCharArray, loadedEntity.primitiveCharArray);
                     Assertions.assertArrayEquals(entity.boxedCharArray, loadedEntity.boxedCharArray);
+
+                    Assertions.assertEquals(entity.enumDefault, loadedEntity.enumDefault);
+                    Assertions.assertEquals(entity.enumOrdinal, loadedEntity.enumOrdinal);
+                    Assertions.assertEquals(entity.enumString, loadedEntity.enumString);
 
                     return "OK";
                 });

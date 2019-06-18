@@ -108,6 +108,23 @@ public class RxDataTypes {
         return e == null ? null : e.ordinal();
     }
 
+    public static <T extends Enum<T>> Enum<T> getEnumString(Row row, String column, Enum<T>[] values) {
+        String name = row.getString(column);
+        // FIXME: Enum.valueOf uses Class.enumConstantDirectory() cached Map: we should figure something
+        // as efficient without using reflection
+        if(name == null)
+            return null;
+        for (Enum<T> val : values) {
+            if(val.name().equals(name))
+                return val;
+        }
+        throw new IllegalArgumentException("No enum constant "+name);
+    }
+
+    public static Object storeEnumString(Enum e) {
+        return e == null ? null : e.name();
+    }
+
     public static <T extends PanacheRxEntityBase<T>> CompletionStage<T> getManyToOne(Row row, String column,
             RxModelInfo<T> modelInfo) {
         // FIXME: type of ID
