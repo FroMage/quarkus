@@ -47,6 +47,11 @@ public class EntityField {
     private static final DotName DOTNAME_OFFSETTIME = DotName.createSimple(java.time.OffsetTime.class.getName());
     private static final DotName DOTNAME_OFFSETDATETIME = DotName.createSimple(java.time.OffsetDateTime.class.getName());
 
+    private static final DotName DOTNAME_PRIMITIVE_BYTE_ARRAY = DotName.createSimple(byte[].class.getName());
+    private static final DotName DOTNAME_BOXED_BYTE_ARRAY = DotName.createSimple(Byte[].class.getName());
+    private static final DotName DOTNAME_PRIMITIVE_CHAR_ARRAY = DotName.createSimple(char[].class.getName());
+    private static final DotName DOTNAME_BOXED_CHAR_ARRAY = DotName.createSimple(Character[].class.getName());
+
     private static final DotName DOTNAME_BOXED_BOOLEAN = DotName.createSimple(Boolean.class.getName());
     private static final DotName DOTNAME_BOOLEAN = DotName.createSimple(Boolean.TYPE.getName());
     private static final DotName DOTNAME_BOXED_BYTE = DotName.createSimple(Byte.class.getName());
@@ -182,6 +187,15 @@ public class EntityField {
         if (typeName.equals(DOTNAME_OFFSETDATETIME))
             return "getOffsetDateTime";
 
+        if (typeName.equals(DOTNAME_PRIMITIVE_BYTE_ARRAY))
+            return "getPrimitiveByteArray";
+        if (typeName.equals(DOTNAME_BOXED_BYTE_ARRAY))
+            return "getBoxedByteArray";
+        if (typeName.equals(DOTNAME_PRIMITIVE_CHAR_ARRAY))
+            return "getPrimitiveCharArray";
+        if (typeName.equals(DOTNAME_BOXED_CHAR_ARRAY))
+            return "getBoxedCharArray";
+
         throw new RuntimeException("Field type not supported yet: " + type + " for field " + name);
     }
 
@@ -269,6 +283,16 @@ public class EntityField {
                 return "storeUtilCalendarAsTime";
             return "storeUtilCalendarAsTimestamp";
         }
+        
+        if (typeName.equals(DOTNAME_PRIMITIVE_BYTE_ARRAY))
+            return "storePrimitiveByteArray";
+        if (typeName.equals(DOTNAME_BOXED_BYTE_ARRAY))
+            return "storeBoxedByteArray";
+        if (typeName.equals(DOTNAME_PRIMITIVE_CHAR_ARRAY))
+            return "storePrimitiveCharArray";
+        if (typeName.equals(DOTNAME_BOXED_CHAR_ARRAY))
+            return "storeBoxedCharArray";
+
         if (isEnum)
             return "storeEnum";
         return null;

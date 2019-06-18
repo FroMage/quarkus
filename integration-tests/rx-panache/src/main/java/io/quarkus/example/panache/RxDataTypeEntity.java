@@ -87,12 +87,13 @@ public class RxDataTypeEntity extends PanacheRxEntity<RxDataTypeEntity> {
     @Column(columnDefinition = "time with time zone")
     public OffsetTime offsetTime;
 
-    //    
-    //    public UUID uuid;
+    public byte[] primitiveByteArray;
+    public Byte[] boxedByteArray;
 
-    // FIXME: byte[], Byte[], char[], Character[]
+    public char[] primitiveCharArray;
+    public Character[] boxedCharArray;
 
     // FIXME: enum, Serializable?
-    // FIXME: Blob, Clob
+    // FIXME: Blob, Clob, Struct, Ref, Array, URL
     // FIXME: Embedded?, ManyToMany, arrays, Maps, Collections
 }

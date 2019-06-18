@@ -1170,6 +1170,11 @@ public class TestEndpoint {
         entity.offsetTime = OffsetTime.now();
         entity.offsetDateTime = OffsetDateTime.now();
 
+        entity.primitiveByteArray = new byte[] {0, 1, 2};
+        entity.boxedByteArray = new Byte[] {0, 1, 2};
+        entity.primitiveCharArray = new char[] {'a', 'b', 'c'};
+        entity.boxedCharArray = new Character[] {'a', 'b', 'c'};
+        
         return entity.save()
                 .thenCompose(savedEntity -> RxDataTypeEntity.<RxDataTypeEntity> findById(savedEntity.id))
                 .thenApply(loadedEntity -> {
@@ -1224,6 +1229,12 @@ public class TestEndpoint {
                     Assertions.assertEquals(entity.offsetTime, loadedEntity.offsetTime);
                     // doesn't work: we store in +2 and get the right time back, but in UTC
                     //                    Assertions.assertEquals(entity.offsetDateTime, loadedEntity.offsetDateTime);
+
+                    Assertions.assertArrayEquals(entity.primitiveByteArray, loadedEntity.primitiveByteArray);
+                    Assertions.assertArrayEquals(entity.boxedByteArray, loadedEntity.boxedByteArray);
+
+                    Assertions.assertArrayEquals(entity.primitiveCharArray, loadedEntity.primitiveCharArray);
+                    Assertions.assertArrayEquals(entity.boxedCharArray, loadedEntity.boxedCharArray);
 
                     return "OK";
                 });

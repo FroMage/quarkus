@@ -17,6 +17,7 @@ import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.RxModelInfo;
 import io.reactiverse.axle.pgclient.Row;
 import io.reactiverse.pgclient.data.Numeric;
+import io.vertx.axle.core.buffer.Buffer;
 
 public class RxDataTypes {
 
@@ -240,4 +241,69 @@ public class RxDataTypes {
     public static OffsetDateTime getOffsetDateTime(Row row, String column) {
         return row.getOffsetDateTime(column);
     }
+
+    public static byte[] getPrimitiveByteArray(Row row, String column) {
+        Buffer buffer = row.getBuffer(column);
+        return buffer == null ? null : buffer.getBytes();
+    }
+
+    public static Object storePrimitiveByteArray(byte[] value) {
+        // FIXME: need to get the delegate because we do Tuple.addValue() which does not unwrap:
+        // https://github.com/eclipse-vertx/vertx-sql-client/issues/333
+        return value == null ? null : Buffer.buffer(value).getDelegate();
+    }
+
+    public static Byte[] getBoxedByteArray(Row row, String column) {
+        Buffer buffer = row.getBuffer(column);
+        if(buffer == null)
+            return null;
+        Byte[] ret = new Byte[buffer.length()];
+        for(int i=0;i<buffer.length();i++)
+            ret[i] = buffer.getByte(i);
+        return ret;
+    }
+
+    public static Object storeBoxedByteArray(Byte[] value) {
+        if(value == null)
+            return null;
+        Buffer buffer = Buffer.buffer(value.length);
+        for (Byte b : value) {
+            buffer.appendByte(b);
+        }
+        // FIXME: need to get the delegate because we do Tuple.addValue() which does not unwrap:
+        // https://github.com/eclipse-vertx/vertx-sql-client/issues/333
+        return buffer.getDelegate();
+    }
+
+    public static char[] getPrimitiveCharArray(Row row, String column) {
+        String string = row.getString(column);
+        return string == null ? null : string.toCharArray();
+    }
+
+    public static Object storePrimitiveCharArray(char[] value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    public static Character[] getBoxedCharArray(Row row, String column) {
+        String buffer = row.getString(column);
+        if(buffer == null)
+            return null;
+        Character[] ret = new Character[buffer.length()];
+        for(int i=0;i<buffer.length();i++)
+            ret[i] = buffer.charAt(i);
+        return ret;
+    }
+
+    public static Object storeBoxedCharArray(Character[] value) {
+        if(value == null)
+            return null;
+        if(value.length == 0)
+            return "";
+        StringBuilder b = new StringBuilder(value.length);
+        for (Character c : value) {
+            b.append(c);
+        }
+        return b.toString();
+    }
+
 }
