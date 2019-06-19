@@ -1,20 +1,8 @@
 package io.quarkus.panache.rx.deployment;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-
-import javax.persistence.Column;
-import javax.persistence.Enumerated;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
-import javax.persistence.Temporal;
-
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
-import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.Type;
@@ -33,59 +21,12 @@ public class EntityField {
     RelationType relationType;
     String reverseField;
     boolean isEnum;
-    private FieldInfo fieldInfo;
     private String columnName;
-
-    private static final DotName DOTNAME_STRING = DotName.createSimple(String.class.getName());
-    private static final DotName DOTNAME_BIGDECIMAL = DotName.createSimple(BigDecimal.class.getName());
-    private static final DotName DOTNAME_BIGINTEGER = DotName.createSimple(BigInteger.class.getName());
-
-    private static final DotName DOTNAME_SQL_DATE = DotName.createSimple(java.sql.Date.class.getName());
-    private static final DotName DOTNAME_SQL_TIME = DotName.createSimple(java.sql.Time.class.getName());
-    private static final DotName DOTNAME_SQL_TIMESTAMP = DotName.createSimple(java.sql.Timestamp.class.getName());
-    private static final DotName DOTNAME_UTIL_DATE = DotName.createSimple(java.util.Date.class.getName());
-    private static final DotName DOTNAME_UTIL_CALENDAR = DotName.createSimple(java.util.Calendar.class.getName());
-
-    private static final DotName DOTNAME_LOCALTIME = DotName.createSimple(java.time.LocalTime.class.getName());
-    private static final DotName DOTNAME_LOCALDATE = DotName.createSimple(java.time.LocalDate.class.getName());
-    private static final DotName DOTNAME_LOCALDATETIME = DotName.createSimple(java.time.LocalDateTime.class.getName());
-    private static final DotName DOTNAME_OFFSETTIME = DotName.createSimple(java.time.OffsetTime.class.getName());
-    private static final DotName DOTNAME_OFFSETDATETIME = DotName.createSimple(java.time.OffsetDateTime.class.getName());
-
-    private static final DotName DOTNAME_PRIMITIVE_BYTE_ARRAY = DotName.createSimple(byte[].class.getName());
-    private static final DotName DOTNAME_BOXED_BYTE_ARRAY = DotName.createSimple(Byte[].class.getName());
-    private static final DotName DOTNAME_PRIMITIVE_CHAR_ARRAY = DotName.createSimple(char[].class.getName());
-    private static final DotName DOTNAME_BOXED_CHAR_ARRAY = DotName.createSimple(Character[].class.getName());
-
-    private static final DotName DOTNAME_BOXED_BOOLEAN = DotName.createSimple(Boolean.class.getName());
-    private static final DotName DOTNAME_BOOLEAN = DotName.createSimple(Boolean.TYPE.getName());
-    private static final DotName DOTNAME_BOXED_BYTE = DotName.createSimple(Byte.class.getName());
-    private static final DotName DOTNAME_BYTE = DotName.createSimple(Byte.TYPE.getName());
-    private static final DotName DOTNAME_BOXED_SHORT = DotName.createSimple(Short.class.getName());
-    private static final DotName DOTNAME_SHORT = DotName.createSimple(Short.TYPE.getName());
-    private static final DotName DOTNAME_BOXED_INTEGER = DotName.createSimple(Integer.class.getName());
-    private static final DotName DOTNAME_INTEGER = DotName.createSimple(Integer.TYPE.getName());
-    private static final DotName DOTNAME_BOXED_LONG = DotName.createSimple(Long.class.getName());
-    private static final DotName DOTNAME_LONG = DotName.createSimple(Long.TYPE.getName());
-    private static final DotName DOTNAME_BOXED_FLOAT = DotName.createSimple(Float.class.getName());
-    private static final DotName DOTNAME_FLOAT = DotName.createSimple(Float.TYPE.getName());
-    private static final DotName DOTNAME_BOXED_DOUBLE = DotName.createSimple(Double.class.getName());
-    private static final DotName DOTNAME_DOUBLE = DotName.createSimple(Double.TYPE.getName());
-    private static final DotName DOTNAME_BOXED_CHARACTER = DotName.createSimple(Character.class.getName());
-    private static final DotName DOTNAME_CHARACTER = DotName.createSimple(Character.TYPE.getName());
-
-    private static final DotName DOTNAME_ENUMERATED = DotName.createSimple(Enumerated.class.getName());
-    private static final DotName DOTNAME_TEMPORAL = DotName.createSimple(Temporal.class.getName());
-    private static final DotName DOTNAME_COLUMN = DotName.createSimple(Column.class.getName());
-    private static final DotName DOTNAME_ONE_TO_MANY = DotName.createSimple(OneToMany.class.getName());
-    private static final DotName DOTNAME_ONE_TO_ONE = DotName.createSimple(OneToOne.class.getName());
-    private static final DotName DOTNAME_MANY_TO_ONE = DotName.createSimple(ManyToOne.class.getName());
-    private static final DotName DOTNAME_MANY_TO_MANY = DotName.createSimple(ManyToMany.class.getName());
+    private SimpleTypeMapper typeMapper;
 
     public EntityField(FieldInfo fieldInfo, IndexView index) {
-        this.fieldInfo = fieldInfo;
         this.name = fieldInfo.name();
-        AnnotationInstance column = fieldInfo.annotation(DOTNAME_COLUMN);
+        AnnotationInstance column = fieldInfo.annotation(JpaNames.DOTNAME_COLUMN);
         if (column != null) {
             AnnotationValue value = column.value("name");
             if (value != null)
@@ -97,141 +38,38 @@ public class EntityField {
         // FIXME: is this right?
         this.isEnum = typeClass != null ? ((typeClass.flags() & Opcodes.ACC_ENUM) != 0) : false;
 
-        if (fieldInfo.hasAnnotation(DOTNAME_MANY_TO_ONE)) {
+        if (fieldInfo.hasAnnotation(JpaNames.DOTNAME_MANY_TO_ONE)) {
             // FIXME: that stinks
             entityClass = fieldInfo.type().asParameterizedType().arguments().get(0);
             relationType = RelationType.MANY_TO_ONE;
-        } else if (fieldInfo.hasAnnotation(DOTNAME_ONE_TO_ONE)) {
+        } else if (fieldInfo.hasAnnotation(JpaNames.DOTNAME_ONE_TO_ONE)) {
             // FIXME: that stinks
             entityClass = fieldInfo.type().asParameterizedType().arguments().get(0);
             relationType = RelationType.ONE_TO_ONE;
-            AnnotationInstance oneToOne = fieldInfo.annotation(DOTNAME_ONE_TO_ONE);
+            AnnotationInstance oneToOne = fieldInfo.annotation(JpaNames.DOTNAME_ONE_TO_ONE);
             AnnotationValue mappedBy = oneToOne.value("mappedBy");
             reverseField = mappedBy != null ? mappedBy.asString() : null;
-        } else if (fieldInfo.hasAnnotation(DOTNAME_ONE_TO_MANY)) {
+        } else if (fieldInfo.hasAnnotation(JpaNames.DOTNAME_ONE_TO_MANY)) {
             // FIXME: that stinks
             entityClass = fieldInfo.type().asParameterizedType().arguments().get(0);
-            AnnotationInstance oneToMany = fieldInfo.annotation(DOTNAME_ONE_TO_MANY);
+            AnnotationInstance oneToMany = fieldInfo.annotation(JpaNames.DOTNAME_ONE_TO_MANY);
             relationType = RelationType.ONE_TO_MANY;
             reverseField = oneToMany.value("mappedBy").asString();
+        } else {
+            typeMapper = TypeMappers.getTypeMapper(isEnum, type.name(), fieldInfo);
+            if (typeMapper == null)
+                throw new RuntimeException("Field type not supported yet: " + type + " for field " + name);
         }
     }
 
     public String getFromRowMethod() {
-        DotName typeName = type.name();
-        // FIXME: this looks like we should just default to get+typeName
-        if (typeName.equals(DOTNAME_STRING))
-            return "getString";
-
-        if (typeName.equals(DOTNAME_BYTE))
-            return "getByte";
-        if (typeName.equals(DOTNAME_BOXED_BYTE))
-            return "getBoxedByte";
-        if (typeName.equals(DOTNAME_CHARACTER))
-            return "getCharacter";
-        if (typeName.equals(DOTNAME_BOXED_CHARACTER))
-            return "getBoxedCharacter";
-        if (typeName.equals(DOTNAME_BOOLEAN))
-            return "getBoolean";
-        if (typeName.equals(DOTNAME_BOXED_BOOLEAN))
-            return "getBoxedBoolean";
-        if (typeName.equals(DOTNAME_SHORT))
-            return "getShort";
-        if (typeName.equals(DOTNAME_BOXED_SHORT))
-            return "getBoxedShort";
-        if (typeName.equals(DOTNAME_INTEGER))
-            return "getInteger";
-        if (typeName.equals(DOTNAME_BOXED_INTEGER))
-            return "getBoxedInteger";
-        if (typeName.equals(DOTNAME_LONG))
-            return "getLong";
-        if (typeName.equals(DOTNAME_BOXED_LONG))
-            return "getBoxedLong";
-        if (typeName.equals(DOTNAME_FLOAT))
-            return "getFloat";
-        if (typeName.equals(DOTNAME_BOXED_FLOAT))
-            return "getBoxedFloat";
-        if (typeName.equals(DOTNAME_DOUBLE))
-            return "getDouble";
-        if (typeName.equals(DOTNAME_BOXED_DOUBLE))
-            return "getBoxedDouble";
-
-        if (typeName.equals(DOTNAME_BIGDECIMAL))
-            return "getBigDecimal";
-        if (typeName.equals(DOTNAME_BIGINTEGER))
-            return "getBigInteger";
-
-        if (typeName.equals(DOTNAME_SQL_DATE))
-            return "getSqlDate";
-        if (typeName.equals(DOTNAME_SQL_TIME))
-            return "getSqlTime";
-        if (typeName.equals(DOTNAME_SQL_TIMESTAMP))
-            return "getSqlTimestamp";
-
-        if (typeName.equals(DOTNAME_UTIL_DATE)) {
-            AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
-            if (temporal == null)
-                return "getUtilDateAsTimestamp";
-            String value = temporal.value().asEnum();
-            if (value.equals("DATE"))
-                return "getUtilDateAsDate";
-            if (value.equals("TIME"))
-                return "getUtilDateAsTime";
-            return "getUtilDateAsTimestamp";
-        }
-
-        if (typeName.equals(DOTNAME_UTIL_CALENDAR)) {
-            AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
-            if (temporal == null)
-                return "getUtilCalendarAsTimestamp";
-            String value = temporal.value().asEnum();
-            if (value.equals("DATE"))
-                return "getUtilCalendarAsDate";
-            if (value.equals("TIME"))
-                return "getUtilCalendarAsTime";
-            return "getUtilCalendarAsTimestamp";
-        }
-
-        if (typeName.equals(DOTNAME_LOCALDATE))
-            return "getLocalDate";
-        if (typeName.equals(DOTNAME_LOCALTIME))
-            return "getLocalTime";
-        if (typeName.equals(DOTNAME_LOCALDATETIME))
-            return "getLocalDateTime";
-        if (typeName.equals(DOTNAME_OFFSETTIME))
-            return "getOffsetTime";
-        if (typeName.equals(DOTNAME_OFFSETDATETIME))
-            return "getOffsetDateTime";
-
-        if (typeName.equals(DOTNAME_PRIMITIVE_BYTE_ARRAY))
-            return "getPrimitiveByteArray";
-        if (typeName.equals(DOTNAME_BOXED_BYTE_ARRAY))
-            return "getBoxedByteArray";
-        if (typeName.equals(DOTNAME_PRIMITIVE_CHAR_ARRAY))
-            return "getPrimitiveCharArray";
-        if (typeName.equals(DOTNAME_BOXED_CHAR_ARRAY))
-            return "getBoxedCharArray";
-
-        if (isEnum) {
-            AnnotationInstance enumerated = fieldInfo.annotation(DOTNAME_ENUMERATED);
-            if (enumerated != null) {
-                AnnotationValue value = enumerated.value();
-                if (value != null && value.kind() == AnnotationValue.Kind.ENUM) {
-                    String enumValue = value.asEnum();
-                    if ("STRING".equals(enumValue))
-                        return "getEnumString";
-                }
-            }
-            return "getEnum";
-        }
-
-        throw new RuntimeException("Field type not supported yet: " + type + " for field " + name);
+        return this.typeMapper.getFromRowMethod();
     }
 
     public Type mappedType() {
         // FIXME: ID type
         if (isManyToOne())
-            return Type.create(DOTNAME_BOXED_LONG, Kind.CLASS);
+            return Type.create(JpaNames.DOTNAME_BOXED_LONG, Kind.CLASS);
         return type;
     }
 
@@ -285,67 +123,22 @@ public class EntityField {
     }
 
     public String getToTupleStoreMethod() {
-        DotName typeName = type.name();
-        if (typeName.equals(DOTNAME_CHARACTER))
-            return "storeCharacter";
-        if (typeName.equals(DOTNAME_BOXED_CHARACTER))
-            return "storeBoxedCharacter";
-        if (typeName.equals(DOTNAME_SQL_DATE))
-            return "storeSqlDate";
-        if (typeName.equals(DOTNAME_SQL_TIME))
-            return "storeSqlTime";
-        if (typeName.equals(DOTNAME_SQL_TIMESTAMP))
-            return "storeSqlTimestamp";
-        if (typeName.equals(DOTNAME_UTIL_DATE)) {
-            AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
-            if (temporal == null)
-                return "storeUtilDateAsTimestamp";
-            String value = temporal.value().asEnum();
-            if (value.equals("DATE"))
-                return "storeUtilDateAsDate";
-            if (value.equals("TIME"))
-                return "storeUtilDateAsTime";
-            return "storeUtilDateAsTimestamp";
-        }
-        if (typeName.equals(DOTNAME_UTIL_CALENDAR)) {
-            AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
-            if (temporal == null)
-                return "storeUtilCalendarAsTimestamp";
-            String value = temporal.value().asEnum();
-            if (value.equals("DATE"))
-                return "storeUtilCalendarAsDate";
-            if (value.equals("TIME"))
-                return "storeUtilCalendarAsTime";
-            return "storeUtilCalendarAsTimestamp";
-        }
-
-        if (typeName.equals(DOTNAME_PRIMITIVE_BYTE_ARRAY))
-            return "storePrimitiveByteArray";
-        if (typeName.equals(DOTNAME_BOXED_BYTE_ARRAY))
-            return "storeBoxedByteArray";
-        if (typeName.equals(DOTNAME_PRIMITIVE_CHAR_ARRAY))
-            return "storePrimitiveCharArray";
-        if (typeName.equals(DOTNAME_BOXED_CHAR_ARRAY))
-            return "storeBoxedCharArray";
-
-        if (isEnum) {
-            AnnotationInstance enumerated = fieldInfo.annotation(DOTNAME_ENUMERATED);
-            if (enumerated != null) {
-                AnnotationValue value = enumerated.value();
-                if (value != null && value.kind() == AnnotationValue.Kind.ENUM) {
-                    String enumValue = value.asEnum();
-                    if ("STRING".equals(enumValue))
-                        return "storeEnumString";
-                }
-            }
-            return "storeEnum";
-        }
-        return null;
+        return typeMapper == null ? null : typeMapper.getToTupleStoreMethod();
     }
 
     public String getToTupleStoreType() {
         if (isEnum)
             return "Ljava/lang/Enum;";
         return typeDescriptor;
+    }
+
+    public boolean isOwningRelation() {
+        return relationType == RelationType.MANY_TO_ONE
+                || (relationType == RelationType.ONE_TO_ONE && reverseField == null);
+    }
+
+    public boolean isNonOwningRelation() {
+        return relationType != null
+                && !isOwningRelation();
     }
 }

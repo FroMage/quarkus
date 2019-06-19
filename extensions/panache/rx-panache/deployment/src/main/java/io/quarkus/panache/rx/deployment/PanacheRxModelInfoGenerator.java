@@ -90,7 +90,7 @@ public class PanacheRxModelInfoGenerator {
         for (int i = 0; i < fields.size(); i++) {
             EntityField field = fields.get(i);
             // skip collections and non-owning relations
-            if (field.isOneToMany() || field.isOneToOneNonOwning())
+            if (field.isNonOwningRelation())
                 continue;
             if (names.length() != 0) {
                 names.append(", ");
@@ -99,7 +99,7 @@ public class PanacheRxModelInfoGenerator {
             if (updateFieldNoId.length() != 0) {
                 updateFieldNoId.append(", ");
             }
-            if (field.isManyToOne() || field.isOneToOneOwning())
+            if (field.isOwningRelation())
                 owningRelations++;
             names.append(field.columnName());
             // count this field, unlike relations or ignored fields
@@ -221,7 +221,7 @@ public class PanacheRxModelInfoGenerator {
                             MethodDescriptor.ofMethod(RxDataTypes.class, field.getFromRowMethod(), Enum.class,
                                     Row.class, String.class, Enum[].class),
                             fromRow.getMethodParam(0), fromRow.load(field.columnName()), enumValues);
-                } else if (field.isManyToOne() || field.isOneToOneOwning()) {
+                } else if (field.isOwningRelation()) {
                     value = fromRow.invokeStaticMethod(
                             MethodDescriptor.ofMethod(RxDataTypes.class, "getManyToOne", CompletionStage.class,
                                     Row.class, String.class, RxModelInfo.class),
@@ -276,10 +276,10 @@ public class PanacheRxModelInfoGenerator {
         for (int j = 1, entityField = 0; j < fields.size(); j++) {
             EntityField field = fields.get(j);
             // skip collections and non-owning 1-1
-            if (field.isOneToMany() || field.isOneToOneNonOwning())
+            if (field.isNonOwningRelation())
                 continue;
             ResultHandle fieldValue;
-            if (field.isManyToOne() || field.isOneToOneOwning()) {
+            if (field.isOwningRelation()) {
                 // we get the value from the function parameter
                 // fieldValue = (($relationEntityClassName)((Object[])param)[{entityField++}]).id;
                 String relationEntityClassName = field.entityClass.name().toString();
@@ -315,7 +315,7 @@ public class PanacheRxModelInfoGenerator {
             toTuple.assign(myArgs, toTuple.newArray(CompletionStage[].class, toTuple.load(owningRelations)));
             int i = 0;
             for (EntityField field : fields) {
-                if (!field.isManyToOne() && !field.isOneToOneOwning())
+                if (!field.isOwningRelation())
                     continue;
                 // myArgs[$i++] = entityParam.${field.name};
                 toTuple.writeArrayValue(myArgs, i++,
