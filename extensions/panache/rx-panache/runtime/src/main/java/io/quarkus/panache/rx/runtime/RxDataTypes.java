@@ -112,13 +112,13 @@ public class RxDataTypes {
         String name = row.getString(column);
         // FIXME: Enum.valueOf uses Class.enumConstantDirectory() cached Map: we should figure something
         // as efficient without using reflection
-        if(name == null)
+        if (name == null)
             return null;
         for (Enum<T> val : values) {
-            if(val.name().equals(name))
+            if (val.name().equals(name))
                 return val;
         }
-        throw new IllegalArgumentException("No enum constant "+name);
+        throw new IllegalArgumentException("No enum constant " + name);
     }
 
     public static Object storeEnumString(Enum e) {
@@ -272,16 +272,16 @@ public class RxDataTypes {
 
     public static Byte[] getBoxedByteArray(Row row, String column) {
         Buffer buffer = row.getBuffer(column);
-        if(buffer == null)
+        if (buffer == null)
             return null;
         Byte[] ret = new Byte[buffer.length()];
-        for(int i=0;i<buffer.length();i++)
+        for (int i = 0; i < buffer.length(); i++)
             ret[i] = buffer.getByte(i);
         return ret;
     }
 
     public static Object storeBoxedByteArray(Byte[] value) {
-        if(value == null)
+        if (value == null)
             return null;
         Buffer buffer = Buffer.buffer(value.length);
         for (Byte b : value) {
@@ -303,18 +303,18 @@ public class RxDataTypes {
 
     public static Character[] getBoxedCharArray(Row row, String column) {
         String buffer = row.getString(column);
-        if(buffer == null)
+        if (buffer == null)
             return null;
         Character[] ret = new Character[buffer.length()];
-        for(int i=0;i<buffer.length();i++)
+        for (int i = 0; i < buffer.length(); i++)
             ret[i] = buffer.charAt(i);
         return ret;
     }
 
     public static Object storeBoxedCharArray(Character[] value) {
-        if(value == null)
+        if (value == null)
             return null;
-        if(value.length == 0)
+        if (value.length == 0)
             return "";
         StringBuilder b = new StringBuilder(value.length);
         for (Character c : value) {

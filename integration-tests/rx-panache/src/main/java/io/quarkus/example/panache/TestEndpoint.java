@@ -1170,15 +1170,15 @@ public class TestEndpoint {
         entity.offsetTime = OffsetTime.now();
         entity.offsetDateTime = OffsetDateTime.now();
 
-        entity.primitiveByteArray = new byte[] {0, 1, 2};
-        entity.boxedByteArray = new Byte[] {0, 1, 2};
-        entity.primitiveCharArray = new char[] {'a', 'b', 'c'};
-        entity.boxedCharArray = new Character[] {'a', 'b', 'c'};
+        entity.primitiveByteArray = new byte[] { 0, 1, 2 };
+        entity.boxedByteArray = new Byte[] { 0, 1, 2 };
+        entity.primitiveCharArray = new char[] { 'a', 'b', 'c' };
+        entity.boxedCharArray = new Character[] { 'a', 'b', 'c' };
 
         entity.enumDefault = RxDataTypeEntity.Foo.ONE;
         entity.enumOrdinal = RxDataTypeEntity.Foo.ONE;
         entity.enumString = RxDataTypeEntity.Foo.ONE;
-        
+
         return entity.save()
                 .thenCompose(savedEntity -> RxDataTypeEntity.<RxDataTypeEntity> findById(savedEntity.id))
                 .thenApply(loadedEntity -> {
@@ -1243,6 +1243,32 @@ public class TestEndpoint {
                     Assertions.assertEquals(entity.enumDefault, loadedEntity.enumDefault);
                     Assertions.assertEquals(entity.enumOrdinal, loadedEntity.enumOrdinal);
                     Assertions.assertEquals(entity.enumString, loadedEntity.enumString);
+
+                    return "OK";
+                });
+    }
+
+    @GET
+    @Path("relations")
+    public CompletionStage<String> testRxRelations() {
+        RxOneToOneEntity oneToOne = new RxOneToOneEntity();
+
+        RxRelationEntity entity = new RxRelationEntity();
+
+        return oneToOne.save()
+                .thenCompose(v -> {
+                    entity.oneToOne = CompletableFuture.completedFuture(oneToOne);
+                    return entity.save();
+                })
+                .thenCompose(savedEntity -> RxRelationEntity.<RxRelationEntity> findById(savedEntity.id))
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(entity.id, loadedEntity.id);
+                    Assertions.assertNotEquals(System.identityHashCode(entity), System.identityHashCode(loadedEntity));
+
+                    return loadedEntity.oneToOne;
+                }).thenApply(loadedOneToOne -> {
+                    Assertions.assertEquals(oneToOne.id, loadedOneToOne.id);
+                    Assertions.assertNotEquals(System.identityHashCode(oneToOne), System.identityHashCode(loadedOneToOne));
 
                     return "OK";
                 });

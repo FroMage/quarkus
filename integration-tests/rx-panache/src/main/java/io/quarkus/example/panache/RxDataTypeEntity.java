@@ -96,15 +96,16 @@ public class RxDataTypeEntity extends PanacheRxEntity<RxDataTypeEntity> {
     public Character[] boxedCharArray;
 
     public enum Foo {
-        ONE, TWO;
+        ONE,
+        TWO;
     }
-    
+
     public Foo enumDefault;
     @Enumerated
     public Foo enumOrdinal;
     @Enumerated(EnumType.STRING)
     public Foo enumString;
-    
+
     // FIXME: Serializable?
     // FIXME: Blob, Clob, Struct, Ref, Array, URL
     // FIXME: Embedded?, ManyToMany, arrays, Maps, Collections

@@ -15,7 +15,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.hibernate.annotations.Target;
-import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
@@ -161,7 +160,8 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
                                         super.visitTypeAnnotation(typeRef, typePath, descriptor, visible));
                             }
                         };
-                    } else if (entityField.isManyToOne()) {
+                    } else if (entityField.isManyToOne() || entityField.isOneToOneNonOwning()
+                            || entityField.isOneToOneOwning()) {
                         // Add @Target(class)
                         FieldVisitor fieldVisitor = super.visitField(access, name, descriptor, signature, value);
                         AnnotationVisitor annotationVisitor = fieldVisitor.visitAnnotation(TARGET_SIGNATURE, true);
@@ -331,23 +331,11 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             String name = fieldInfo.name();
             if (Modifier.isPublic(fieldInfo.flags())
                     && !fieldInfo.hasAnnotation(DOTNAME_TRANSIENT)) {
-                if (fieldInfo.hasAnnotation(DOTNAME_MANY_TO_ONE)) {
-                    // FIXME: that stinks
-                    Type entityType = fieldInfo.type().asParameterizedType().arguments().get(0);
-                    fields.put(name, new EntityField(fieldInfo, index, entityType));
-                } else if (fieldInfo.hasAnnotation(DOTNAME_ONE_TO_MANY)) {
-                    // FIXME: that stinks
-                    Type entityType = fieldInfo.type().asParameterizedType().arguments().get(0);
-                    AnnotationInstance oneToMany = fieldInfo.annotation(DOTNAME_ONE_TO_MANY);
-                    fields.put(name,
-                            new EntityField(fieldInfo, index, entityType, oneToMany.value("mappedBy").asString()));
-                } else {
-                    EntityField field = new EntityField(fieldInfo, index);
-                    if (fieldInfo.hasAnnotation(DOTNAME_ID)) {
-                        idField = field;
-                    }
-                    fields.put(name, field);
+                EntityField field = new EntityField(fieldInfo, index);
+                if (fieldInfo.hasAnnotation(DOTNAME_ID)) {
+                    idField = field;
                 }
+                fields.put(name, field);
             }
         }
         entities.put(classInfo.name().toString(), new EntityModel(classInfo, fields, idField));

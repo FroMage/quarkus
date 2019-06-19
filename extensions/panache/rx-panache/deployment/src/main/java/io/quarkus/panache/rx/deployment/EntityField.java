@@ -5,6 +5,10 @@ import java.math.BigInteger;
 
 import javax.persistence.Column;
 import javax.persistence.Enumerated;
+import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Temporal;
 
 import org.jboss.jandex.AnnotationInstance;
@@ -73,6 +77,10 @@ public class EntityField {
     private static final DotName DOTNAME_ENUMERATED = DotName.createSimple(Enumerated.class.getName());
     private static final DotName DOTNAME_TEMPORAL = DotName.createSimple(Temporal.class.getName());
     private static final DotName DOTNAME_COLUMN = DotName.createSimple(Column.class.getName());
+    private static final DotName DOTNAME_ONE_TO_MANY = DotName.createSimple(OneToMany.class.getName());
+    private static final DotName DOTNAME_ONE_TO_ONE = DotName.createSimple(OneToOne.class.getName());
+    private static final DotName DOTNAME_MANY_TO_ONE = DotName.createSimple(ManyToOne.class.getName());
+    private static final DotName DOTNAME_MANY_TO_MANY = DotName.createSimple(ManyToMany.class.getName());
 
     public EntityField(FieldInfo fieldInfo, IndexView index) {
         this.fieldInfo = fieldInfo;
@@ -88,19 +96,25 @@ public class EntityField {
         ClassInfo typeClass = index.getClassByName(type.name());
         // FIXME: is this right?
         this.isEnum = typeClass != null ? ((typeClass.flags() & Opcodes.ACC_ENUM) != 0) : false;
-    }
 
-    public EntityField(FieldInfo fieldInfo, IndexView index, Type entityClass) {
-        this(fieldInfo, index);
-        this.relationType = RelationType.ONE;
-        this.entityClass = entityClass;
-    }
-
-    public EntityField(FieldInfo fieldInfo, IndexView index, Type entityClass, String mappedBy) {
-        this(fieldInfo, index);
-        this.relationType = RelationType.MANY;
-        this.entityClass = entityClass;
-        this.reverseField = mappedBy;
+        if (fieldInfo.hasAnnotation(DOTNAME_MANY_TO_ONE)) {
+            // FIXME: that stinks
+            entityClass = fieldInfo.type().asParameterizedType().arguments().get(0);
+            relationType = RelationType.MANY_TO_ONE;
+        } else if (fieldInfo.hasAnnotation(DOTNAME_ONE_TO_ONE)) {
+            // FIXME: that stinks
+            entityClass = fieldInfo.type().asParameterizedType().arguments().get(0);
+            relationType = RelationType.ONE_TO_ONE;
+            AnnotationInstance oneToOne = fieldInfo.annotation(DOTNAME_ONE_TO_ONE);
+            AnnotationValue mappedBy = oneToOne.value("mappedBy");
+            reverseField = mappedBy != null ? mappedBy.asString() : null;
+        } else if (fieldInfo.hasAnnotation(DOTNAME_ONE_TO_MANY)) {
+            // FIXME: that stinks
+            entityClass = fieldInfo.type().asParameterizedType().arguments().get(0);
+            AnnotationInstance oneToMany = fieldInfo.annotation(DOTNAME_ONE_TO_MANY);
+            relationType = RelationType.ONE_TO_MANY;
+            reverseField = oneToMany.value("mappedBy").asString();
+        }
     }
 
     public String getFromRowMethod() {
@@ -198,13 +212,13 @@ public class EntityField {
         if (typeName.equals(DOTNAME_BOXED_CHAR_ARRAY))
             return "getBoxedCharArray";
 
-        if(isEnum) {
+        if (isEnum) {
             AnnotationInstance enumerated = fieldInfo.annotation(DOTNAME_ENUMERATED);
-            if(enumerated != null) {
+            if (enumerated != null) {
                 AnnotationValue value = enumerated.value();
-                if(value != null && value.kind() == AnnotationValue.Kind.ENUM) {
+                if (value != null && value.kind() == AnnotationValue.Kind.ENUM) {
                     String enumValue = value.asEnum();
-                    if("STRING".equals(enumValue))
+                    if ("STRING".equals(enumValue))
                         return "getEnumString";
                 }
             }
@@ -222,18 +236,26 @@ public class EntityField {
     }
 
     public boolean isManyToOne() {
-        return relationType == RelationType.ONE;
+        return relationType == RelationType.MANY_TO_ONE;
     }
 
     public boolean isOneToMany() {
-        return relationType == RelationType.MANY;
+        return relationType == RelationType.ONE_TO_MANY;
+    }
+
+    public boolean isOneToOneOwning() {
+        return relationType == RelationType.ONE_TO_ONE && reverseField == null;
+    }
+
+    public boolean isOneToOneNonOwning() {
+        return relationType == RelationType.ONE_TO_ONE && reverseField != null;
     }
 
     public String columnName() {
         if (columnName != null)
             return columnName.toLowerCase();
         // FIXME: should be locale-independent
-        if (isManyToOne())
+        if (isManyToOne() || isOneToOneOwning())
             return name.toLowerCase() + "_id";
         return name.toLowerCase();
     }
@@ -296,7 +318,7 @@ public class EntityField {
                 return "storeUtilCalendarAsTime";
             return "storeUtilCalendarAsTimestamp";
         }
-        
+
         if (typeName.equals(DOTNAME_PRIMITIVE_BYTE_ARRAY))
             return "storePrimitiveByteArray";
         if (typeName.equals(DOTNAME_BOXED_BYTE_ARRAY))
@@ -308,11 +330,11 @@ public class EntityField {
 
         if (isEnum) {
             AnnotationInstance enumerated = fieldInfo.annotation(DOTNAME_ENUMERATED);
-            if(enumerated != null) {
+            if (enumerated != null) {
                 AnnotationValue value = enumerated.value();
-                if(value != null && value.kind() == AnnotationValue.Kind.ENUM) {
+                if (value != null && value.kind() == AnnotationValue.Kind.ENUM) {
                     String enumValue = value.asEnum();
-                    if("STRING".equals(enumValue))
+                    if ("STRING".equals(enumValue))
                         return "storeEnumString";
                 }
             }

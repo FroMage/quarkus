@@ -25,6 +25,7 @@ import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
 import io.quarkus.panache.rx.PanacheRxEntity;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
+import io.quarkus.panache.rx.PanacheRxQuery;
 import io.quarkus.panache.rx.RxModelInfo;
 import io.quarkus.panache.rx.deployment.PanacheRxResourceProcessor.ProcessorClassOutput;
 import io.quarkus.panache.rx.runtime.RxDataTypes;
@@ -84,12 +85,12 @@ public class PanacheRxModelInfoGenerator {
         StringBuilder names = new StringBuilder();
         StringBuilder indices = new StringBuilder();
         StringBuilder updateFieldNoId = new StringBuilder();
-        int manyToOnes = 0;
+        int owningRelations = 0;
         int fieldCount = 0;
         for (int i = 0; i < fields.size(); i++) {
             EntityField field = fields.get(i);
-            // skip collections
-            if (field.isOneToMany())
+            // skip collections and non-owning relations
+            if (field.isOneToMany() || field.isOneToOneNonOwning())
                 continue;
             if (names.length() != 0) {
                 names.append(", ");
@@ -98,8 +99,8 @@ public class PanacheRxModelInfoGenerator {
             if (updateFieldNoId.length() != 0) {
                 updateFieldNoId.append(", ");
             }
-            if (field.isManyToOne())
-                manyToOnes++;
+            if (field.isManyToOne() || field.isOneToOneOwning())
+                owningRelations++;
             names.append(field.columnName());
             // count this field, unlike relations or ignored fields
             fieldCount++;
@@ -122,7 +123,7 @@ public class PanacheRxModelInfoGenerator {
         getTableName.returnValue(getTableName.load(tableName));
 
         // toTuple
-        createToTuple(modelClass, modelClassName, fields, manyToOnes, entities, idField);
+        createToTuple(modelClass, modelClassName, fields, owningRelations, entities, idField);
 
         // Bridge methods
         MethodCreator toTupleBridge = modelClass.getMethodCreator("toTuple", CompletionStage.class, PanacheRxEntityBase.class);
@@ -187,15 +188,40 @@ public class PanacheRxModelInfoGenerator {
                 fromRow.assign(fieldValue, fromRow.invokeStaticMethod(
                         MethodDescriptor.ofMethod(RxOperations.class, "deferPublisher", Publisher.class, Callable.class),
                         deferred.getInstance()));
+            } else if (field.isOneToOneNonOwning()) {
+                // fieldValue = RxOperations.deferCompletionStage(() -> RxDog.<RxDog>find("owner_id = ?1", id).singleResult());
+                FunctionCreator deferred = fromRow.createFunction(Callable.class);
+                BytecodeCreator deferredCreator = deferred.getBytecode();
+
+                ResultHandle array = deferredCreator.newArray(Object.class, deferredCreator.load(1));
+                deferredCreator.writeArrayValue(array, 0,
+                        deferredCreator.readInstanceField(
+                                FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
+                                variable));
+                ResultHandle obs = deferredCreator.invokeStaticMethod(
+                        MethodDescriptor.ofMethod(field.entityClassName(), "find", PanacheRxQuery.class, String.class,
+                                Object[].class),
+                        // FIXME: do not hardcode
+                        deferredCreator.load(field.reverseField + "_id = ?1"), array);
+                obs = deferredCreator.invokeVirtualMethod(
+                        MethodDescriptor.ofMethod(PanacheRxQuery.class, "singleResult", Object.class), obs);
+                deferredCreator.returnValue(obs);
+                deferredCreator.close();
+                // FIXME: ADD CACHE?
+                fromRow.assign(fieldValue, fromRow.invokeStaticMethod(
+                        MethodDescriptor.ofMethod(RxOperations.class, "deferCompletionStage", CompletionStage.class,
+                                Callable.class),
+                        deferred.getInstance()));
             } else {
                 if (field.isEnum) {
                     ResultHandle enumValues = fromRow.invokeStaticMethod(MethodDescriptor.ofMethod(field.typeClassName(),
                             "values", "[L" + field.typeClassName() + ";"));
 
-                    value = fromRow.invokeStaticMethod(MethodDescriptor.ofMethod(RxDataTypes.class, field.getFromRowMethod(), Enum.class,
-                            Row.class, String.class, Enum[].class),
+                    value = fromRow.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(RxDataTypes.class, field.getFromRowMethod(), Enum.class,
+                                    Row.class, String.class, Enum[].class),
                             fromRow.getMethodParam(0), fromRow.load(field.columnName()), enumValues);
-                } else if (field.isManyToOne()) {
+                } else if (field.isManyToOne() || field.isOneToOneOwning()) {
                     value = fromRow.invokeStaticMethod(
                             MethodDescriptor.ofMethod(RxDataTypes.class, "getManyToOne", CompletionStage.class,
                                     Row.class, String.class, RxModelInfo.class),
@@ -223,13 +249,13 @@ public class PanacheRxModelInfoGenerator {
     }
 
     private static void createToTuple(ClassCreator modelClass, String modelClassName, List<EntityField> fields,
-            int manyToOnes, Map<String, EntityModel> entities, EntityField idField) {
+            int owningRelations, Map<String, EntityModel> entities, EntityField idField) {
         MethodCreator toTuple = modelClass.getMethodCreator("toTuple", CompletionStage.class, modelClassName);
         ResultHandle entityParam = toTuple.getMethodParam(0);
 
         BytecodeCreator creator = toTuple;
         FunctionCreator myFunction = null;
-        if (manyToOnes > 0) {
+        if (owningRelations > 0) {
             myFunction = toTuple.createFunction(Function.class);
             creator = myFunction.getBytecode();
         }
@@ -249,11 +275,11 @@ public class PanacheRxModelInfoGenerator {
         // skip the ID field
         for (int j = 1, entityField = 0; j < fields.size(); j++) {
             EntityField field = fields.get(j);
-            // skip collections
-            if (field.isOneToMany())
+            // skip collections and non-owning 1-1
+            if (field.isOneToMany() || field.isOneToOneNonOwning())
                 continue;
             ResultHandle fieldValue;
-            if (field.isManyToOne()) {
+            if (field.isManyToOne() || field.isOneToOneOwning()) {
                 // we get the value from the function parameter
                 // fieldValue = (($relationEntityClassName)((Object[])param)[{entityField++}]).id;
                 String relationEntityClassName = field.entityClass.name().toString();
@@ -280,16 +306,16 @@ public class PanacheRxModelInfoGenerator {
                     fieldValue);
         }
 
-        if (manyToOnes > 0) {
+        if (owningRelations > 0) {
             // f = () -> ... myTuple
             creator.returnValue(myTuple);
 
             // CompletionStage[] myArgs = new CompletionStage[$manyToOnes]
             AssignableResultHandle myArgs = toTuple.createVariable(CompletionStage[].class);
-            toTuple.assign(myArgs, toTuple.newArray(CompletionStage[].class, toTuple.load(manyToOnes)));
+            toTuple.assign(myArgs, toTuple.newArray(CompletionStage[].class, toTuple.load(owningRelations)));
             int i = 0;
             for (EntityField field : fields) {
-                if (!field.isManyToOne())
+                if (!field.isManyToOne() && !field.isOneToOneOwning())
                     continue;
                 // myArgs[$i++] = entityParam.${field.name};
                 toTuple.writeArrayValue(myArgs, i++,

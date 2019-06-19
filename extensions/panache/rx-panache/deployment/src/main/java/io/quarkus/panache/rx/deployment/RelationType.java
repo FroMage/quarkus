@@ -1,6 +1,8 @@
 package io.quarkus.panache.rx.deployment;
 
 public enum RelationType {
-    ONE,
-    MANY;
+    ONE_TO_ONE,
+    MANY_TO_ONE,
+    ONE_TO_MANY,
+    MANY_TO_MANY;
 }
