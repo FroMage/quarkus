@@ -17,4 +17,8 @@ public interface RxModelInfo<T extends PanacheRxEntityBase<?>> {
     String updateStatement();
 
     CompletionStage<Tuple> toTuple(T entity);
+
+    CompletionStage<Void> afterSave(T entity);
+
+    CompletionStage<Void> beforeDelete(T entity);
 }

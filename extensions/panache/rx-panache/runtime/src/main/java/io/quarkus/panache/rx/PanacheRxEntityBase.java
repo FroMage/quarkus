@@ -27,7 +27,7 @@ import io.quarkus.panache.rx.runtime.RxOperations;
  * @author Stéphane Épardaud
  * @see PanacheEntity
  */
-public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<?>> {
+public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<T>> {
 
     // FIXME: tweak this
     public abstract Object _getId();

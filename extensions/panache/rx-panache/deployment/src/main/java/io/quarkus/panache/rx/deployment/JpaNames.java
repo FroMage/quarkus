@@ -5,6 +5,7 @@ import java.math.BigInteger;
 
 import javax.persistence.Column;
 import javax.persistence.Enumerated;
+import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -59,4 +60,5 @@ public class JpaNames {
     static final DotName DOTNAME_ONE_TO_ONE = DotName.createSimple(OneToOne.class.getName());
     static final DotName DOTNAME_MANY_TO_ONE = DotName.createSimple(ManyToOne.class.getName());
     static final DotName DOTNAME_MANY_TO_MANY = DotName.createSimple(ManyToMany.class.getName());
+    static final DotName DOTNAME_JOIN_TABLE = DotName.createSimple(JoinTable.class.getName());
 }

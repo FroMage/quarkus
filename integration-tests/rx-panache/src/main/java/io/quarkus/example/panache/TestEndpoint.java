@@ -1254,10 +1254,16 @@ public class TestEndpoint {
         RxOneToOneEntity oneToOne = new RxOneToOneEntity();
 
         RxRelationEntity entity = new RxRelationEntity();
+        RxManyToManyEntity manyToMany = new RxManyToManyEntity();
 
         return oneToOne.save()
                 .thenCompose(v -> {
                     entity.oneToOne = CompletableFuture.completedFuture(oneToOne);
+
+                    return manyToMany.save();
+                }).thenCompose(v -> {
+                    entity.manyToManys = ReactiveStreams.of(manyToMany).buildRs();
+
                     return entity.save();
                 })
                 .thenCompose(savedEntity -> RxRelationEntity.<RxRelationEntity> findById(savedEntity.id))
@@ -1265,12 +1271,31 @@ public class TestEndpoint {
                     Assertions.assertEquals(entity.id, loadedEntity.id);
                     Assertions.assertNotEquals(System.identityHashCode(entity), System.identityHashCode(loadedEntity));
 
-                    return loadedEntity.oneToOne;
-                }).thenApply(loadedOneToOne -> {
-                    Assertions.assertEquals(oneToOne.id, loadedOneToOne.id);
-                    Assertions.assertNotEquals(System.identityHashCode(oneToOne), System.identityHashCode(loadedOneToOne));
+                    Assertions.assertNotNull(loadedEntity.manyToManys);
 
-                    return "OK";
+                    return loadedEntity.oneToOne
+                            .thenCompose(loadedOneToOne -> {
+                                Assertions.assertEquals(oneToOne.id, loadedOneToOne.id);
+                                Assertions.assertNotEquals(System.identityHashCode(oneToOne),
+                                        System.identityHashCode(loadedOneToOne));
+
+                                return toList(loadedEntity.manyToManys);
+                            }).thenCompose(loadedManyToManys -> {
+                                Assertions.assertEquals(1, loadedManyToManys.size());
+                                RxManyToManyEntity loadedManyToMany = loadedManyToManys.get(0);
+                                Assertions.assertEquals(manyToMany.id, loadedManyToMany.id);
+                                Assertions.assertNotEquals(System.identityHashCode(manyToMany),
+                                        System.identityHashCode(loadedManyToMany));
+
+                                return entity.delete();
+                            }).thenCompose(v -> RxManyToManyEntity.<RxManyToManyEntity> findById(manyToMany.id))
+                            .thenCompose(loadedManyToMany -> {
+                                Assertions.assertNotNull(loadedManyToMany);
+                                return toList(loadedManyToMany.relations);
+                            }).thenApply(relations -> {
+                                Assertions.assertTrue(relations.isEmpty());
+                                return "OK";
+                            });
                 });
     }
 }

@@ -10,6 +10,9 @@ import java.util.Set;
 import java.util.function.BiFunction;
 
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
@@ -41,6 +44,14 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
     public final static String TRANSIENT_BINARY_NAME = TRANSIENT_NAME.replace('.', '/');
     public final static String TRANSIENT_SIGNATURE = "L" + TRANSIENT_BINARY_NAME + ";";
 
+    public final static String JOIN_TABLE_NAME = JoinTable.class.getName();
+    public final static String JOIN_TABLE_BINARY_NAME = JOIN_TABLE_NAME.replace('.', '/');
+    public final static String JOIN_TABLE_SIGNATURE = "L" + JOIN_TABLE_BINARY_NAME + ";";
+
+    public final static String JOIN_COLUMN_NAME = JoinColumn.class.getName();
+    public final static String JOIN_COLUMN_BINARY_NAME = JOIN_COLUMN_NAME.replace('.', '/');
+    public final static String JOIN_COLUMN_SIGNATURE = "L" + JOIN_COLUMN_BINARY_NAME + ";";
+
     public final static String TARGET_NAME = Target.class.getName();
     public final static String TARGET_BINARY_NAME = TARGET_NAME.replace('.', '/');
     public final static String TARGET_SIGNATURE = "L" + TARGET_BINARY_NAME + ";";
@@ -56,6 +67,10 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
     public final static String RX_MODEL_INFO_NAME = RxModelInfo.class.getName();
     public final static String RX_MODEL_INFO_BINARY_NAME = RX_MODEL_INFO_NAME.replace('.', '/');
     public final static String RX_MODEL_INFO_SIGNATURE = "L" + RX_MODEL_INFO_BINARY_NAME + ";";
+
+    public final static String MANY_TO_MANY_NAME = ManyToMany.class.getName();
+    public final static String MANY_TO_MANY_BINARY_NAME = MANY_TO_MANY_NAME.replace('.', '/');
+    public final static String MANY_TO_MANY_SIGNATURE = "L" + MANY_TO_MANY_BINARY_NAME + ";";
 
     public final static String RX_MODEL_FIELD_NAME = "INSTANCE";
     public final static String RX_MODEL_SUFFIX = "$__MODEL";
@@ -121,12 +136,35 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             if ((access & Opcodes.ACC_PUBLIC) != 0 && fields != null) {
                 EntityField entityField = fields.get(name);
                 if (entityField != null) {
-                    if (entityField.isOneToMany()) {
+                    if (entityField.isOneToMany() || entityField.isManyToMany()) {
                         // must create a fake field for hibernate with the same annotations
                         FieldVisitor fakeFieldVisitor = super.visitField(Opcodes.ACC_PUBLIC, "__hibernate_fake_" + name,
                                 "Ljava/util/List;",
                                 "Ljava/util/List" + signature.substring(signature.indexOf("<")),
                                 null);
+
+                        if (entityField.isManyToMany() && entityField.isOwningRelation()) {
+                            // FIXME: this is a hack
+                            AnnotationVisitor annotationVisitor = fakeFieldVisitor.visitAnnotation(JOIN_TABLE_SIGNATURE, true);
+
+                            AnnotationVisitor annotationArrayVisitor = annotationVisitor.visitArray("joinColumns");
+
+                            AnnotationVisitor joinColumnVisitor = annotationArrayVisitor.visitAnnotation(null,
+                                    JOIN_COLUMN_SIGNATURE);
+                            joinColumnVisitor.visit("name", entityField.computedReverseField() + "_id");
+                            joinColumnVisitor.visitEnd();
+
+                            annotationArrayVisitor.visitEnd();
+                            annotationArrayVisitor = annotationVisitor.visitArray("inverseJoinColumns");
+
+                            joinColumnVisitor = annotationArrayVisitor.visitAnnotation(null, JOIN_COLUMN_SIGNATURE);
+                            joinColumnVisitor.visit("name", name + "_id");
+                            joinColumnVisitor.visitEnd();
+
+                            annotationArrayVisitor.visitEnd();
+                            annotationVisitor.visitEnd();
+                        }
+
                         // must add the @Transient annotation for hibernate. we don't care about it since we already
                         // read the field
                         FieldVisitor fieldVisitor = super.visitField(access, name, descriptor, signature, value);
@@ -143,7 +181,15 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
                             @Override
                             public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
                                 return new MultiplexingAnnotationVisitor(fakeFieldVisitor.visitAnnotation(descriptor, visible),
-                                        super.visitAnnotation(descriptor, visible));
+                                        super.visitAnnotation(descriptor, visible)) {
+                                    @Override
+                                    public void visit(String name, Object value) {
+                                        if (descriptor.equals(MANY_TO_MANY_SIGNATURE) && name.equals("mappedBy"))
+                                            super.visit(name, "__hibernate_fake_" + value);
+                                        else
+                                            super.visit(name, value);
+                                    }
+                                };
                             }
 
                             @Override
@@ -331,7 +377,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             String name = fieldInfo.name();
             if (Modifier.isPublic(fieldInfo.flags())
                     && !fieldInfo.hasAnnotation(DOTNAME_TRANSIENT)) {
-                EntityField field = new EntityField(fieldInfo, index);
+                EntityField field = new EntityField(entities, fieldInfo, index);
                 if (fieldInfo.hasAnnotation(DOTNAME_ID)) {
                     idField = field;
                 }

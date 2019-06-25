@@ -10,12 +10,15 @@ public class EntityModel {
     final String superClassName;
     final Map<String, EntityField> fields;
     public EntityField idField;
+    final String tableName;
 
     public EntityModel(ClassInfo classInfo, Map<String, EntityField> fields, EntityField idField) {
         this.name = classInfo.name().toString();
         this.superClassName = classInfo.superName().toString();
         this.fields = fields;
         this.idField = idField;
+        // FIXME: read @Table annotation
+        this.tableName = classInfo.simpleName();
     }
 
 }
