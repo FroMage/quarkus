@@ -34,6 +34,7 @@ public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<T>> {
 
     public abstract void _setId(Object id);
 
+    // FIXME: should be CompletionStage<T>?
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public CompletionStage<? extends T> save() {
         return (CompletionStage) RxOperations.save(this);

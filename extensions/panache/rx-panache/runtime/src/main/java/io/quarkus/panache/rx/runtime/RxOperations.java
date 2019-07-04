@@ -7,7 +7,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.microprofile.reactive.streams.operators.ReactiveStreams;
@@ -517,10 +516,9 @@ public class RxOperations {
         return deleteOperation
                 // collect ids
                 .thenCompose(v -> ReactiveStreams.fromPublisher(manyToManys).map(elem -> Tuple.of(ownerId, elem._getId()))
-                        .collect(Collectors.toList()).run())
+                        .toList().run())
                 // insert relations
                 .thenCompose(batch -> preparedBatch(pgPool, insertQuery, batch))
                 .thenApply(v -> null);
     }
-
 }
