@@ -38,6 +38,7 @@ import io.quarkus.deployment.builditem.BytecodeTransformerBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.deployment.builditem.HotDeploymentWatchedFileBuildItem;
+import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.deployment.builditem.substrate.SubstrateResourceBuildItem;
 import io.quarkus.deployment.configuration.ConfigurationError;
 import io.quarkus.gizmo.ClassOutput;
@@ -137,6 +138,7 @@ public final class PanacheRxResourceProcessor {
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     void configure(PanacheRxConfig config,
+                   LaunchModeBuildItem launchMode,
             DataSourceConfig dataSourceConfig,
             ModelClassesBuildItem modelClasses,
             PgPoolImporterTemplate template,
@@ -167,11 +169,24 @@ public final class PanacheRxResourceProcessor {
                     template.configure(importFile, beanContainer.getValue());
                 });
 
-        // FIXME: same defaults as reactivepgclient
-        template.updateSchema(modelClasses.modelClasses,
-                dataSourceConfig.url.orElse(null),
-                dataSourceConfig.username.orElse(null),
-                dataSourceConfig.password.orElse(null));
+        String generation = config.generation.orElseGet(() -> {
+            switch(launchMode.getLaunchMode()) {
+          case DEVELOPMENT:
+              return "update";
+          case TEST:
+              return "create";
+          default:
+              return "none";
+            }
+        });
+        if(!generation.equals("none")) {
+            // FIXME: same defaults as reactivepgclient
+            template.updateSchema(modelClasses.modelClasses,
+                                  generation,
+                                  dataSourceConfig.url.orElse(null),
+                                  dataSourceConfig.username.orElse(null),
+                                  dataSourceConfig.password.orElse(null));
+        }
 
         //raise exception if explicit file is not present (i.e. not the default)
         config.sqlLoadScript

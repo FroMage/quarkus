@@ -14,4 +14,12 @@ public class PanacheRxConfig {
      */
     @ConfigItem
     public Optional<String> sqlLoadScript;
+
+    /**
+     * Control how schema generation is happening in Panache RX.
+     * <p>
+     * Values: none (default on prod), create, drop-and-create (default on test), drop, update (default on dev)
+     */
+    @ConfigItem
+    public Optional<String> generation;
 }

@@ -23,6 +23,7 @@ import java.io.InputStreamReader;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -68,7 +69,7 @@ public class PgPoolImporterTemplate {
         }
     }
 
-    public void updateSchema(Set<String> annotatedClasses, String url, String user, String pass) {
+    public void updateSchema(Set<String> annotatedClasses, String generation, String url, String user, String pass) {
         Map<String, String> settings = new HashMap<>();
         settings.put(Environment.DRIVER, "org.postgresql.Driver");
         settings.put(Environment.DIALECT, "org.hibernate.dialect.PostgreSQL95Dialect");
@@ -76,7 +77,7 @@ public class PgPoolImporterTemplate {
         settings.put(Environment.URL, jdbcUrl);
         settings.put(Environment.USER, user);
         settings.put(Environment.PASS, pass);
-        settings.put(Environment.HBM2DDL_AUTO, "create");
+        settings.put(Environment.HBM2DDL_AUTO, generation);
         settings.put(Environment.SHOW_SQL, "true");
 
         MetadataSources metadata = new MetadataSources(
