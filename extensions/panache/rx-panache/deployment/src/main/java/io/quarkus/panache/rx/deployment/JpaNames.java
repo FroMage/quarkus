@@ -5,6 +5,8 @@ import java.math.BigInteger;
 
 import javax.persistence.Column;
 import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
@@ -61,4 +63,6 @@ public class JpaNames {
     static final DotName DOTNAME_MANY_TO_ONE = DotName.createSimple(ManyToOne.class.getName());
     static final DotName DOTNAME_MANY_TO_MANY = DotName.createSimple(ManyToMany.class.getName());
     static final DotName DOTNAME_JOIN_TABLE = DotName.createSimple(JoinTable.class.getName());
+    static final DotName DOTNAME_GENERATED_VALUE = DotName.createSimple(GeneratedValue.class.getName());
+    static final DotName DOTNAME_ID = DotName.createSimple(Id.class.getName());
 }

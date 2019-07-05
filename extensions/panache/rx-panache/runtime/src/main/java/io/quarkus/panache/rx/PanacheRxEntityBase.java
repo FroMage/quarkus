@@ -29,11 +29,6 @@ import io.quarkus.panache.rx.runtime.RxOperations;
  */
 public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<T>> {
 
-    // FIXME: tweak this
-    public abstract Object _getId();
-
-    public abstract void _setId(Object id);
-
     // FIXME: should be CompletionStage<T>?
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public CompletionStage<? extends T> save() {
@@ -50,10 +45,9 @@ public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<T>> {
     }
 
     public boolean isPersistent() {
-        return RxOperations.isPersistent(this);
+        return getModelInfo().isPersistent((T) this);
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public boolean equals(Object obj) {
         if (obj == null)
@@ -62,12 +56,12 @@ public abstract class PanacheRxEntityBase<T extends PanacheRxEntityBase<T>> {
             return true;
         if (obj.getClass() != getClass())
             return false;
-        return Objects.equals(_getId(), ((PanacheRxEntityBase) obj)._getId());
+        return Objects.equals(getModelInfo().getId((T) this), getModelInfo().getId((T) obj));
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(_getId());
+        return Objects.hash(getModelInfo().getId((T) this));
     }
 
     //

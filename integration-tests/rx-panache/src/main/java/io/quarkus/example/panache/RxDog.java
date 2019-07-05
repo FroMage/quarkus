@@ -28,18 +28,4 @@ public class RxDog extends PanacheRxEntityBase<RxDog> {
         this.name = name;
         this.race = race;
     }
-
-    @Override
-    public Object _getId() {
-        return id;
-    }
-
-    @Override
-    public void _setId(Object id) {
-        // FIXME:
-        if (id instanceof Long)
-            this.id = ((Long) id).intValue();
-        else
-            this.id = (Integer) id;
-    }
 }

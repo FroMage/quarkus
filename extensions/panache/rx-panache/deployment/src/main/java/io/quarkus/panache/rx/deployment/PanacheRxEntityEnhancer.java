@@ -3,18 +3,14 @@ package io.quarkus.panache.rx.deployment;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 
-import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.hibernate.annotations.Target;
@@ -75,10 +71,9 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
     public final static String RX_MODEL_FIELD_NAME = "INSTANCE";
     public final static String RX_MODEL_SUFFIX = "$__MODEL";
 
-    private static final DotName DOTNAME_ID = DotName.createSimple(Id.class.getName());
+    public final static String RX_PERSISTENT_FIELD_NAME = "__persistent";
+
     private static final DotName DOTNAME_TRANSIENT = DotName.createSimple(Transient.class.getName());
-    private static final DotName DOTNAME_MANY_TO_ONE = DotName.createSimple(ManyToOne.class.getName());
-    private static final DotName DOTNAME_ONE_TO_MANY = DotName.createSimple(OneToMany.class.getName());
 
     final Map<String, EntityModel> entities = new HashMap<>();
     private IndexView index;
@@ -151,14 +146,14 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
                             AnnotationVisitor joinColumnVisitor = annotationArrayVisitor.visitAnnotation(null,
                                     JOIN_COLUMN_SIGNATURE);
-                            joinColumnVisitor.visit("name", entityField.computedReverseField() + "_id");
+                            joinColumnVisitor.visit("name", entityField.joinColumn());
                             joinColumnVisitor.visitEnd();
 
                             annotationArrayVisitor.visitEnd();
                             annotationArrayVisitor = annotationVisitor.visitArray("inverseJoinColumns");
 
                             joinColumnVisitor = annotationArrayVisitor.visitAnnotation(null, JOIN_COLUMN_SIGNATURE);
-                            joinColumnVisitor.visit("name", name + "_id");
+                            joinColumnVisitor.visit("name", entityField.inverseJoinColumn());
                             joinColumnVisitor.visitEnd();
 
                             annotationArrayVisitor.visitEnd();
@@ -238,6 +233,10 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
         @Override
         public void visitEnd() {
+            
+            // add our package-private persistent field
+            super.visitField(Opcodes.ACC_SYNTHETIC, RX_PERSISTENT_FIELD_NAME, "Z", null, null);
+            
             // no-arg constructor 
             MethodVisitor mv;
             if (!defaultConstructorPresent) {
@@ -370,20 +369,14 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
     }
 
     public void collectFields(ClassInfo classInfo) {
-        // FIXME: IMPORTANT: preserve order to keep ID field first
-        Map<String, EntityField> fields = new LinkedHashMap<>();
-        EntityField idField = null;
+        EntityModel entityModel = new EntityModel(classInfo, entities);
         for (FieldInfo fieldInfo : classInfo.fields()) {
-            String name = fieldInfo.name();
             if (Modifier.isPublic(fieldInfo.flags())
                     && !fieldInfo.hasAnnotation(DOTNAME_TRANSIENT)) {
-                EntityField field = new EntityField(entities, fieldInfo, index);
-                if (fieldInfo.hasAnnotation(DOTNAME_ID)) {
-                    idField = field;
-                }
-                fields.put(name, field);
+                EntityField field = new EntityField(entityModel, entities, fieldInfo, index);
+                entityModel.addField(field);
             }
         }
-        entities.put(classInfo.name().toString(), new EntityModel(classInfo, fields, idField));
+        entities.put(classInfo.name().toString(), entityModel);
     }
 }

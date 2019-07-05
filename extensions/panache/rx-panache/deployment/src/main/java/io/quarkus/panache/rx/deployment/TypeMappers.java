@@ -12,29 +12,29 @@ import org.jboss.jandex.FieldInfo;
 
 public class TypeMappers {
     private static final SimpleTypeMapper[] SIMPLE_ENTITY_FIELD_TYPES = new SimpleTypeMapper[] {
-            new SimpleTypeMapper(DOTNAME_STRING, "getString", null),
-            new SimpleTypeMapper(DOTNAME_BYTE, "getByte", null),
-            new SimpleTypeMapper(DOTNAME_BOXED_BYTE, "getBoxedByte", null),
-            new SimpleTypeMapper(DOTNAME_CHARACTER, "getCharacter", "storeCharacter"),
+            new SimpleTypeMapper(DOTNAME_STRING, "getString", null, "setStringId", null),
+            new SimpleTypeMapper(DOTNAME_BYTE, "getByte", null, "setByteId", "getByteId"),
+            new SimpleTypeMapper(DOTNAME_BOXED_BYTE, "getBoxedByte", null, "setBoxedByteId", null),
+            new SimpleTypeMapper(DOTNAME_CHARACTER, "getCharacter", "storeCharacter", "setCharacterId", "getCharacterId"),
             new SimpleTypeMapper(DOTNAME_BOXED_CHARACTER, "getBoxedCharacter", "storeBoxedCharacter"),
-            new SimpleTypeMapper(DOTNAME_BOOLEAN, "getBoolean", null),
-            new SimpleTypeMapper(DOTNAME_BOXED_BOOLEAN, "getBoxedBoolean", null),
-            new SimpleTypeMapper(DOTNAME_SHORT, "getShort", null),
-            new SimpleTypeMapper(DOTNAME_BOXED_SHORT, "getBoxedShort", null),
-            new SimpleTypeMapper(DOTNAME_INTEGER, "getInteger", null),
-            new SimpleTypeMapper(DOTNAME_BOXED_INTEGER, "getBoxedInteger", null),
-            new SimpleTypeMapper(DOTNAME_LONG, "getLong", null),
-            new SimpleTypeMapper(DOTNAME_BOXED_LONG, "getBoxedLong", null),
-            new SimpleTypeMapper(DOTNAME_FLOAT, "getFloat", null),
-            new SimpleTypeMapper(DOTNAME_BOXED_FLOAT, "getBoxedFloat", null),
-            new SimpleTypeMapper(DOTNAME_DOUBLE, "getDouble", null),
-            new SimpleTypeMapper(DOTNAME_BOXED_DOUBLE, "getBoxedDouble", null),
-            new SimpleTypeMapper(DOTNAME_BIGDECIMAL, "getBigDecimal", null),
-            new SimpleTypeMapper(DOTNAME_BIGINTEGER, "getBigInteger", null),
-            new SimpleTypeMapper(DOTNAME_SQL_DATE, "getSqlDate", "storeSqlDate"),
+            new SimpleTypeMapper(DOTNAME_BOOLEAN, "getBoolean", null, "setBooleanId", "getBooleanId"),
+            new SimpleTypeMapper(DOTNAME_BOXED_BOOLEAN, "getBoxedBoolean", null, "setBoxedBooleanId", null),
+            new SimpleTypeMapper(DOTNAME_SHORT, "getShort", null, "setShortId", "getShortId"),
+            new SimpleTypeMapper(DOTNAME_BOXED_SHORT, "getBoxedShort", null, "setBoxedShortId", null),
+            new SimpleTypeMapper(DOTNAME_INTEGER, "getInteger", null, "setIntegerId", "getIntegerId"),
+            new SimpleTypeMapper(DOTNAME_BOXED_INTEGER, "getBoxedInteger", null, "setBoxedIntegerId", null),
+            new SimpleTypeMapper(DOTNAME_LONG, "getLong", null, "setLongId", "getLongId"),
+            new SimpleTypeMapper(DOTNAME_BOXED_LONG, "getBoxedLong", null, "setBoxedLongId", null),
+            new SimpleTypeMapper(DOTNAME_FLOAT, "getFloat", null, "setFloatId", "getFloatId"),
+            new SimpleTypeMapper(DOTNAME_BOXED_FLOAT, "getBoxedFloat", null, "setBoxedFloatId", null),
+            new SimpleTypeMapper(DOTNAME_DOUBLE, "getDouble", null, "setDoubleId", "getDoubleId"),
+            new SimpleTypeMapper(DOTNAME_BOXED_DOUBLE, "getBoxedDouble", null, "setBoxedDoubleId", null),
+            new SimpleTypeMapper(DOTNAME_BIGDECIMAL, "getBigDecimal", null, "setBigDecimalId", null),
+            new SimpleTypeMapper(DOTNAME_BIGINTEGER, "getBigInteger", null, "setBigIntegerId", null),
+            new SimpleTypeMapper(DOTNAME_SQL_DATE, "getSqlDate", "storeSqlDate", "setSqlDateId", null),
             new SimpleTypeMapper(DOTNAME_SQL_TIME, "getSqlTime", "storeSqlTime"),
             new SimpleTypeMapper(DOTNAME_SQL_TIMESTAMP, "getSqlTimestamp", "storeSqlTimestamp"),
-            new SimpleTypeMapper(DOTNAME_UTIL_DATE, "getUtilDateAsTimestamp", "storeUtilDateAsTimestamp") {
+            new SimpleTypeMapper(DOTNAME_UTIL_DATE, "getUtilDateAsTimestamp", "storeUtilDateAsTimestamp", "setUtilDateId", null) {
                 public SimpleTypeMapper getMostPreciseMapper(FieldInfo fieldInfo) {
                     AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
                     if (temporal != null && temporal.value() != null) {
@@ -80,9 +80,9 @@ public class TypeMappers {
     }
 
     private static final SimpleTypeMapper UTIL_DATE_AS_DATE = new SimpleTypeMapper(DOTNAME_UTIL_DATE, "getUtilDateAsDate",
-            "storeUtilDateAsDate");
+            "storeUtilDateAsDate", "setUtilDateId", null);
     private static final SimpleTypeMapper UTIL_DATE_AS_TIME = new SimpleTypeMapper(DOTNAME_UTIL_DATE, "getUtilDateAsTime",
-            "storeUtilDateAsTime");
+            "storeUtilDateAsTime", "setUtilDateId", null);
 
     private static final SimpleTypeMapper UTIL_CALENDAR_AS_DATE = new SimpleTypeMapper(DOTNAME_UTIL_CALENDAR,
             "getUtilCalendarAsDate", "storeUtilCalendarAsDate");

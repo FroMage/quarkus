@@ -34,34 +34,44 @@ public class RxOperations {
         RxModelInfo<T> modelInfo = (RxModelInfo<T>) entity.getModelInfo();
         // FIXME: custom id generation
         CompletionStage<?> saveOrUpdate = modelInfo.toTuple(entity).thenCompose(t -> {
-            if (entity._getId() == null)
-                return preparedQuery(pool, "SELECT nextval('hibernate_sequence') AS id")
+            if (!entity.isPersistent()) {
+                if(modelInfo.isGeneratedId()) {
+                    return preparedQuery(pool, "SELECT nextval('hibernate_sequence') AS id")
                         .thenApply(rowset -> rowset.iterator().next().getLong("id")).thenCompose(id -> {
-                            // non-persisted tuples are missing their id
-                            Tuple withId = Tuple.tuple();
-                            withId.addValue(id);
-                            for (int i = 0; i < t.size(); i++) {
-                                withId.addValue(t.getValue(i));
-                            }
-                            return preparedQuery(pool, modelInfo.insertStatement(), withId).thenApply(rowset -> {
-                                entity._setId(id);
-                                return rowset;
-                            });
+                            return persist(pool, entity, modelInfo, t, id);
                         });
-            else
+                } else {
+                    return persist(pool, entity, modelInfo, t, modelInfo.getId(entity));
+                }
+            } else {
                 return preparedQuery(pool, modelInfo.updateStatement(), t);
+            }
         });
         return attachStackTrace(saveOrUpdate.thenCompose(v -> modelInfo.afterSave(entity)).thenApply(v -> entity));
+    }
+
+    private static <T extends PanacheRxEntityBase<?>> CompletionStage<PgRowSet> persist(PgPool pool, T entity, RxModelInfo<T> modelInfo, Tuple t, Object id) {
+        // non-persisted tuples are missing their id
+        Tuple withId = Tuple.tuple();
+        withId.addValue(id);
+        for (int i = 0; i < t.size(); i++) {
+            withId.addValue(t.getValue(i));
+        }
+        return preparedQuery(pool, modelInfo.insertStatement(), withId).thenApply(rowset -> {
+            modelInfo.markPersistent(entity);
+            if(modelInfo.isGeneratedId())
+                modelInfo.setId(entity, id);
+            return rowset;
+        });
     }
 
     public static <T extends PanacheRxEntityBase<?>> CompletionStage<Void> delete(T entity) {
         PgPool pool = getPgPool();
         @SuppressWarnings("unchecked")
         RxModelInfo<T> modelInfo = (RxModelInfo<T>) entity.getModelInfo();
-        // FIXME: id column from model info
         return attachStackTrace(modelInfo.beforeDelete(entity)
-                .thenCompose(v -> pool.preparedQuery("DELETE FROM " + modelInfo.getTableName() + " WHERE id = $1",
-                        Tuple.of(entity._getId())))
+                .thenCompose(v -> pool.preparedQuery("DELETE FROM " + modelInfo.getTableName() + " WHERE "+modelInfo.getIdName()+" = $1",
+                        Tuple.of(modelInfo.getId(entity))))
                 // ignoreElement
                 .thenApply(rowset -> null));
     }
@@ -105,9 +115,9 @@ public class RxOperations {
         return state.thenApply(v -> zipper.apply(results));
     }
 
-    public static boolean isPersistent(PanacheRxEntityBase<?> entity) {
-        return entity._getId() != null;
-    }
+//    public static boolean isPersistent(PanacheRxEntityBase<?> entity) {
+//        return entity._getId() != null;
+//    }
 
     //
     // Private stuff
@@ -140,7 +150,6 @@ public class RxOperations {
     }
 
     private static String createFindQuery(RxModelInfo<?> modelInfo, String query, int paramCount) {
-        // FIXME: field order from model info
         if (query == null)
             return "SELECT * FROM " + getEntityName(modelInfo);
 
@@ -213,10 +222,9 @@ public class RxOperations {
 
     public static Publisher<?> findManyToMany(RxModelInfo<?> ownerModelInfo, RxModelInfo<?> otherModelInfo, Object ownerId,
             String joinTable, String ownerJoinColumn, String otherJoinColumn) {
-        // FIXME: id columns from model info
         // SELECT other.* FROM Other as other LEFT JOIN OwnerOther as ownerOther on other.id = ownerOther.other_id WHERE ownerOther.owner_id = ?
         String query = "SELECT other.* FROM " + getEntityName(otherModelInfo) + " AS other "
-                + " LEFT JOIN " + joinTable + " AS ownerOther ON other.id = ownerOther." + otherJoinColumn
+                + " LEFT JOIN " + joinTable + " AS ownerOther ON other."+otherModelInfo.getIdName()+" = ownerOther." + otherJoinColumn
                 + " WHERE ownerOther." + ownerJoinColumn + " = $1";
         PgPool pool = getPgPool();
         return queryToEntityStream(otherModelInfo, preparedQuery(pool, query, Tuple.of(ownerId)));
@@ -240,8 +248,7 @@ public class RxOperations {
 
     public static CompletionStage<?> findById(RxModelInfo<?> modelInfo, Object id) {
         PgPool pool = getPgPool();
-        // FIXME: field list and id column name from model info
-        return preparedQuery(pool, "SELECT * FROM " + modelInfo.getTableName() + " WHERE id = $1", Tuple.of(id))
+        return preparedQuery(pool, "SELECT * FROM " + modelInfo.getTableName() + " WHERE "+ modelInfo.getIdName() +" = $1", Tuple.of(id))
                 .thenApply(rowset -> {
                     if (rowset.size() == 1)
                         return modelInfo.fromRow(rowset.iterator().next());
@@ -515,7 +522,7 @@ public class RxOperations {
 
         return deleteOperation
                 // collect ids
-                .thenCompose(v -> ReactiveStreams.fromPublisher(manyToManys).map(elem -> Tuple.of(ownerId, elem._getId()))
+                .thenCompose(v -> ReactiveStreams.fromPublisher(manyToManys).map(elem -> Tuple.of(ownerId, ((RxModelInfo)elem.getModelInfo()).getId(elem)))
                         .toList().run())
                 // insert relations
                 .thenCompose(batch -> preparedBatch(pgPool, insertQuery, batch))

@@ -1298,4 +1298,48 @@ public class TestEndpoint {
                             });
                 });
     }
+
+    @GET
+    @Path("ids")
+    public CompletionStage<String> testRxIds() {
+        RxCustomIdEntityRelation relation = new RxCustomIdEntityRelation();
+        relation.myId = "bar";
+        Assertions.assertFalse(relation.isPersistent());
+
+        RxCustomIdEntityOneRelation oneRelation = new RxCustomIdEntityOneRelation();
+        oneRelation.myId = "gee";
+        Assertions.assertFalse(oneRelation.isPersistent());
+
+        RxCustomIdEntity entity = new RxCustomIdEntity();
+
+        return oneRelation.save()
+                .thenCompose(savedOneRelation -> {
+                    Assertions.assertTrue(savedOneRelation.isPersistent());
+                    
+                    entity.oneRelation = CompletableFuture.completedFuture(savedOneRelation);
+                    return relation.save(); 
+                })
+                .thenCompose(savedRelation -> {
+                    Assertions.assertTrue(savedRelation.isPersistent());
+                    
+                    entity.myId = "foo";
+                    entity.relations = ReactiveStreams.of(relation).buildRs();
+                    
+                    return entity.save()
+                            .thenCompose(savedEntity -> RxCustomIdEntity.<RxCustomIdEntity>findById("foo"))
+                            .thenCompose(loadedEntity -> {
+                                Assertions.assertEquals(loadedEntity.myId, entity.myId);
+                                
+                                return toList(loadedEntity.relations);
+                            }).thenCompose(relations -> {
+                                
+                                Assertions.assertEquals(1, relations.size());
+                                Assertions.assertEquals(relation.myId, relations.get(0).myId);
+                                
+                                return entity.delete();
+                            }).thenApply(v -> {
+                                return "OK";
+                            });
+                });
+    }
 }

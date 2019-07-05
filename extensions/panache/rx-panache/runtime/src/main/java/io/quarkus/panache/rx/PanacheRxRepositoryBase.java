@@ -38,7 +38,7 @@ public interface PanacheRxRepositoryBase<Entity extends PanacheRxEntityBase<Enti
     }
 
     public default boolean isPersistent(Entity entity) {
-        return RxOperations.isPersistent(entity);
+        return entity.isPersistent();
     }
 
     //

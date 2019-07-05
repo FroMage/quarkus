@@ -39,7 +39,7 @@ public class PanacheRxModelInfoGenerator {
             BuildProducer<GeneratedClassBuildItem> generatedClasses) {
 
         List<EntityField> fields = new ArrayList<>();
-        collectFields(entities, modelClassName, fields);
+        EntityModel entityModel = collectFields(entities, modelClassName, fields);
 
         String modelType = modelClassName.replace('.', '/');
         String modelSignature = "L" + modelType + ";";
@@ -77,8 +77,10 @@ public class PanacheRxModelInfoGenerator {
         MethodCreator getEntityClass = modelClass.getMethodCreator("getEntityClass", Class.class);
         getEntityClass.returnValue(getEntityClass.loadClass(modelClassName));
 
-        EntityField idField = getIdField(modelClassName, entities);
+        EntityField idField = entityModel.getIdField();
         createFromRow(modelClass, modelClassName, modelSignature, fields, idField);
+
+        createIdMethods(modelClass, modelClassName, modelSignature, fields, idField);
 
         // insertStatement
         MethodCreator insertStatement = modelClass.getMethodCreator("insertStatement", String.class);
@@ -105,8 +107,8 @@ public class PanacheRxModelInfoGenerator {
             // count this field, unlike relations or ignored fields
             fieldCount++;
             indices.append("$" + fieldCount);
-            // FIXME: depends on ID being the first field
-            if (i > 0) {
+            // FIXME: cannot update field id with this logic
+            if (!field.isId) {
                 updateFieldNoId.append(field.columnName() + " = $" + fieldCount);
             }
         }
@@ -126,48 +128,104 @@ public class PanacheRxModelInfoGenerator {
         createToTuple(modelClass, modelClassName, fields, owningRelations, entities, idField);
 
         // afterSave
-        createAfterSave(modelClass, modelClassName, fields);
+        createAfterSave(modelClass, modelClassName, fields, idField);
 
         // beforeDelete
-        createBeforeDelete(modelClass, modelClassName, fields);
+        createBeforeDelete(modelClass, modelClassName, fields, idField);
 
         // Bridge methods
-        MethodCreator toTupleBridge = modelClass.getMethodCreator("toTuple", CompletionStage.class, PanacheRxEntityBase.class);
-        toTupleBridge.setModifiers(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
-        toTupleBridge.returnValue(toTupleBridge.invokeVirtualMethod(MethodDescriptor.ofMethod(modelInfoClassName, "toTuple",
-                CompletionStage.class, modelClassName),
-                toTupleBridge.getThis(),
-                toTupleBridge.checkCast(toTupleBridge.getMethodParam(0), modelClassName)));
-
-        MethodCreator afterSaveBridge = modelClass.getMethodCreator("afterSave", CompletionStage.class,
-                PanacheRxEntityBase.class);
-        afterSaveBridge.setModifiers(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
-        afterSaveBridge.returnValue(afterSaveBridge.invokeVirtualMethod(
-                MethodDescriptor.ofMethod(modelInfoClassName, "afterSave",
-                        CompletionStage.class, modelClassName),
-                afterSaveBridge.getThis(),
-                afterSaveBridge.checkCast(afterSaveBridge.getMethodParam(0), modelClassName)));
-
-        MethodCreator beforeDeleteBridge = modelClass.getMethodCreator("beforeDelete", CompletionStage.class,
-                PanacheRxEntityBase.class);
-        beforeDeleteBridge.setModifiers(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
-        beforeDeleteBridge.returnValue(beforeDeleteBridge.invokeVirtualMethod(
-                MethodDescriptor.ofMethod(modelInfoClassName, "beforeDelete",
-                        CompletionStage.class, modelClassName),
-                beforeDeleteBridge.getThis(),
-                beforeDeleteBridge.checkCast(beforeDeleteBridge.getMethodParam(0), modelClassName)));
-
-        MethodCreator fromRowBridge = modelClass.getMethodCreator("fromRow", PanacheRxEntityBase.class, Row.class);
-        fromRowBridge.setModifiers(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
-        fromRowBridge.returnValue(fromRowBridge.invokeVirtualMethod(MethodDescriptor.ofMethod(modelInfoClassName, "fromRow",
-                modelClassName, Row.class),
-                fromRowBridge.getThis(),
-                fromRowBridge.getMethodParam(0)));
+        generateBridge(modelClass, modelInfoClassName, modelClassName, BridgeType.FirstParam, "toTuple", CompletionStage.class, PanacheRxEntityBase.class);
+        generateBridge(modelClass, modelInfoClassName, modelClassName, BridgeType.FirstParam, "afterSave", CompletionStage.class, PanacheRxEntityBase.class);
+        generateBridge(modelClass, modelInfoClassName, modelClassName, BridgeType.FirstParam, "beforeDelete", CompletionStage.class, PanacheRxEntityBase.class);
+        generateBridge(modelClass, modelInfoClassName, modelClassName, BridgeType.Return, "fromRow", PanacheRxEntityBase.class, Row.class);
+        generateBridge(modelClass, modelInfoClassName, modelClassName, BridgeType.FirstParam, "getId", Object.class, PanacheRxEntityBase.class);
+        generateBridge(modelClass, modelInfoClassName, modelClassName, BridgeType.FirstParam, "setId", void.class, PanacheRxEntityBase.class, Object.class);
+        generateBridge(modelClass, modelInfoClassName, modelClassName, BridgeType.FirstParam, "isPersistent", boolean.class, PanacheRxEntityBase.class);
+        generateBridge(modelClass, modelInfoClassName, modelClassName, BridgeType.FirstParam, "markPersistent", void.class, PanacheRxEntityBase.class);
 
         modelClass.close();
     }
 
-    private static void createBeforeDelete(ClassCreator modelClass, String modelClassName, List<EntityField> fields) {
+    enum BridgeType {
+        Return, FirstParam;
+    }
+    
+    private static void generateBridge(ClassCreator modelClass, String modelInfoClassName, String modelClassName,
+                                       BridgeType bridgeType,
+                                       String methodName, Class<?> returnClass, Class<?>... params) {
+        MethodCreator fromRowBridge = modelClass.getMethodCreator(methodName, returnClass, params);
+        fromRowBridge.setModifiers(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE);
+        ResultHandle[] passedParams = new ResultHandle[params.length];
+        Object[] targetParamTypes = new Object[params.length];
+        for (int i = 0; i < params.length; i++) {
+            passedParams[i] = fromRowBridge.getMethodParam(i);
+            if(bridgeType == BridgeType.FirstParam && i == 0) {
+                passedParams[i] = fromRowBridge.checkCast(passedParams[i], modelClassName);
+                targetParamTypes[i] = modelClassName;
+            } else {
+                targetParamTypes[i] = params[i];
+            }
+        }
+        Object targetReturnType = bridgeType == BridgeType.Return ? modelClassName : returnClass;
+        
+        fromRowBridge.returnValue(fromRowBridge.invokeVirtualMethod(MethodDescriptor.ofMethod(modelInfoClassName, methodName,
+                targetReturnType, targetParamTypes),
+                fromRowBridge.getThis(),
+                passedParams));
+    }
+
+    private static void createIdMethods(ClassCreator modelClass, String modelClassName, String modelSignature, List<EntityField> fields,
+                                        EntityField idField) {
+        SimpleTypeMapper typeMapper = idField.getTypeMapper();
+
+        {
+            MethodCreator getId = modelClass.getMethodCreator("getId", Object.class, modelClassName);
+            ResultHandle readField = getId.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor), getId.getMethodParam(0));
+            // FIXME: should it go via the accessor method?
+            if(typeMapper.getGetIdMethod() == null)
+                getId.returnValue(readField);
+            else {
+                getId.returnValue(getId.invokeStaticMethod(MethodDescriptor.ofMethod(RxDataTypes.class, typeMapper.getGetIdMethod(), 
+                                                                                     Object.class, idField.typeDescriptor),
+                                                           readField));
+            }
+            getId.close();
+        }
+        
+        {
+            MethodCreator setId = modelClass.getMethodCreator("setId", void.class, modelClassName, Object.class);
+            // FIXME: should it go via the accessor method?
+            ResultHandle convertedId = setId.invokeStaticMethod(MethodDescriptor.ofMethod(RxDataTypes.class, typeMapper.getSetIdMethod(), 
+                                                                                          idField.typeDescriptor, Object.class),
+                                                                setId.getMethodParam(1));
+            setId.writeInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor), setId.getMethodParam(0), convertedId);
+            setId.returnValue(setId.loadNull());
+            setId.close();
+        }
+
+        {
+            MethodCreator isPersistent = modelClass.getMethodCreator("isPersistent", boolean.class, modelClassName);
+            isPersistent.returnValue(isPersistent.readInstanceField(FieldDescriptor.of(modelClassName, PanacheRxEntityEnhancer.RX_PERSISTENT_FIELD_NAME, boolean.class), isPersistent.getMethodParam(0)));
+            isPersistent.close();
+
+            MethodCreator markPersistent = modelClass.getMethodCreator("markPersistent", void.class, modelClassName);
+            markPersistent.writeInstanceField(FieldDescriptor.of(modelClassName, PanacheRxEntityEnhancer.RX_PERSISTENT_FIELD_NAME, boolean.class), markPersistent.getMethodParam(0), markPersistent.load(true));
+            markPersistent.returnValue(markPersistent.loadNull());
+            markPersistent.close();
+        }
+
+        {
+            MethodCreator isGeneratedId = modelClass.getMethodCreator("isGeneratedId", boolean.class);
+            isGeneratedId.returnValue(isGeneratedId.load(idField.isGenerated));
+            isGeneratedId.close();
+
+            MethodCreator getIdName = modelClass.getMethodCreator("getIdName", String.class);
+            getIdName.returnValue(getIdName.load(idField.name));
+            getIdName.close();
+        }
+    }
+
+    private static void createBeforeDelete(ClassCreator modelClass, String modelClassName, List<EntityField> fields, EntityField idField) {
         MethodCreator beforeDelete = modelClass.getMethodCreator("beforeDelete", CompletionStage.class, modelClassName);
         AssignableResultHandle ret = beforeDelete.createVariable(CompletionStage.class);
 
@@ -190,8 +248,7 @@ public class PanacheRxModelInfoGenerator {
                 ResultHandle deleteOperation = functionBytecode.invokeStaticMethod(
                         MethodDescriptor.ofMethod(RxOperations.class, "deleteManyToMany", CompletionStage.class,
                                 Object.class, String.class),
-                        // FIXME: ID type
-                        functionBytecode.readInstanceField(FieldDescriptor.of(PanacheRxEntity.class, "id", Long.class),
+                        functionBytecode.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
                                 beforeDelete.getMethodParam(0)),
                         functionBytecode.load(deleteQuery));
                 functionBytecode.returnValue(deleteOperation);
@@ -209,7 +266,7 @@ public class PanacheRxModelInfoGenerator {
         beforeDelete.close();
     }
 
-    private static void createAfterSave(ClassCreator modelClass, String modelClassName, List<EntityField> fields) {
+    private static void createAfterSave(ClassCreator modelClass, String modelClassName, List<EntityField> fields, EntityField idField) {
         MethodCreator afterSave = modelClass.getMethodCreator("afterSave", CompletionStage.class, modelClassName);
 
         AssignableResultHandle ret = afterSave.createVariable(CompletionStage.class);
@@ -237,8 +294,7 @@ public class PanacheRxModelInfoGenerator {
                 ResultHandle saveOperation = functionBytecode.invokeStaticMethod(
                         MethodDescriptor.ofMethod(RxOperations.class, "saveManyToMany", CompletionStage.class,
                                 Object.class, Publisher.class, String.class, String.class),
-                        // FIXME: ID type
-                        functionBytecode.readInstanceField(FieldDescriptor.of(PanacheRxEntity.class, "id", Long.class),
+                        functionBytecode.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
                                 afterSave.getMethodParam(0)),
                         functionBytecode.readInstanceField(FieldDescriptor.of(modelClassName, field.name, Publisher.class),
                                 afterSave.getMethodParam(0)),
@@ -258,16 +314,17 @@ public class PanacheRxModelInfoGenerator {
         afterSave.close();
     }
 
-    private static void collectFields(Map<String, EntityModel> entities, String modelClassName, List<EntityField> fields) {
+    private static EntityModel collectFields(Map<String, EntityModel> entities, String modelClassName, List<EntityField> fields) {
         EntityModel entityModel = entities.get(modelClassName);
         if (entityModel == null)
-            return;
+            return null;
 
         // collect supertype fields first
         if (entityModel.superClassName != null)
             collectFields(entities, entityModel.superClassName, fields);
 
         fields.addAll(entityModel.fields.values());
+        return entityModel;
     }
 
     private static void createFromRow(ClassCreator modelClass, String modelClassName, String modelSignature,
@@ -277,6 +334,8 @@ public class PanacheRxModelInfoGenerator {
         AssignableResultHandle variable = fromRow.createVariable(modelSignature);
         // arg-less constructor
         fromRow.assign(variable, fromRow.newInstance(MethodDescriptor.ofConstructor(modelClassName)));
+        // mark it persistent
+        fromRow.writeInstanceField(FieldDescriptor.of(modelClassName, PanacheRxEntityEnhancer.RX_PERSISTENT_FIELD_NAME, boolean.class), variable, fromRow.load(true));
 
         // set each field from the Row
         for (EntityField field : fields) {
@@ -295,8 +354,7 @@ public class PanacheRxModelInfoGenerator {
                 ResultHandle obs = deferredCreator.invokeStaticMethod(
                         MethodDescriptor.ofMethod(field.entityClassName(), "stream", Publisher.class, String.class,
                                 Object[].class),
-                        // FIXME: do not hardcode
-                        deferredCreator.load(field.reverseField + "_id = ?1"), array);
+                        deferredCreator.load(field.inverseJoinColumn() + " = ?1"), array);
                 deferredCreator.returnValue(obs);
                 deferredCreator.close();
                 // FIXME: ADD CACHE?
@@ -316,8 +374,7 @@ public class PanacheRxModelInfoGenerator {
                 ResultHandle obs = deferredCreator.invokeStaticMethod(
                         MethodDescriptor.ofMethod(field.entityClassName(), "find", PanacheRxQuery.class, String.class,
                                 Object[].class),
-                        // FIXME: do not hardcode
-                        deferredCreator.load(field.reverseField + "_id = ?1"), array);
+                        deferredCreator.load(field.inverseJoinColumn() + " = ?1"), array);
                 obs = deferredCreator.invokeVirtualMethod(
                         MethodDescriptor.ofMethod(PanacheRxQuery.class, "singleResult", Object.class), obs);
                 deferredCreator.returnValue(obs);
@@ -413,30 +470,28 @@ public class PanacheRxModelInfoGenerator {
         ResultHandle myTuple = creator.invokeStaticMethod(MethodDescriptor.ofMethod(Tuple.class, "tuple", Tuple.class));
 
         BranchResult branch = creator
-                .ifNull(creator.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
-                        entityParam));
-        branch.trueBranch().close();
-        ResultHandle idFieldValue = branch.falseBranch().readInstanceField(
+                .ifNonZero(creator.readInstanceField(FieldDescriptor.of(modelClassName, PanacheRxEntityEnhancer.RX_PERSISTENT_FIELD_NAME, "Z"),
+                                                     entityParam));
+        ResultHandle idFieldValue = branch.trueBranch().readInstanceField(
                 FieldDescriptor.of(modelClassName, idField.name, idField.typeDescriptor),
                 entityParam);
-        branch.falseBranch().invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class),
+        branch.trueBranch().invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class),
                 myTuple, idFieldValue);
+        branch.trueBranch().close();
         branch.falseBranch().close();
 
-        // skip the ID field
-        for (int j = 1, entityField = 0; j < fields.size(); j++) {
+        for (int j = 0, entityField = 0; j < fields.size(); j++) {
             EntityField field = fields.get(j);
-            // skip collections and non-owning 1-1
-            if (field.isNonOwningRelation() || field.isManyToMany())
+            // skip id, collections and non-owning 1-1
+            if (field.isNonOwningRelation() || field.isManyToMany() || field.isId)
                 continue;
             ResultHandle fieldValue;
             if (field.isOwningRelation()) {
                 // we get the value from the function parameter
                 // fieldValue = (($relationEntityClassName)((Object[])param)[{entityField++}]).id;
                 String relationEntityClassName = field.entityClass.name().toString();
-                EntityField relationEntityIdField = getIdField(relationEntityClassName, entities);
-                // FIXME: wrong field type
-                fieldValue = creator.readInstanceField(FieldDescriptor.of(PanacheRxEntity.class, relationEntityIdField.name,
+                EntityField relationEntityIdField = field.getInverseEntity().getIdField();
+                fieldValue = creator.readInstanceField(FieldDescriptor.of(relationEntityClassName, relationEntityIdField.name,
                         relationEntityIdField.typeDescriptor),
                         creator.checkCast(
                                 creator.readArrayValue(creator.checkCast(creator.getMethodParam(0), Object[].class),
@@ -486,14 +541,5 @@ public class PanacheRxModelInfoGenerator {
                                     Object.class),
                             myTuple));
         }
-    }
-
-    private static EntityField getIdField(String entityClassName, Map<String, EntityModel> entities) {
-        EntityModel entityModel = entities.get(entityClassName);
-        if (entityModel.idField != null)
-            return entityModel.idField;
-        if (entityModel.superClassName != null)
-            return getIdField(entityModel.superClassName, entities);
-        throw new RuntimeException("Failed to find ID field for entity " + entityClassName);
     }
 }

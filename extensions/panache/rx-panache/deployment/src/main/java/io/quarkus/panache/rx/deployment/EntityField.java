@@ -30,8 +30,12 @@ public class EntityField {
     private String joinTable;
     private String joinColumn;
     private String inverseJoinColumn;
+    boolean isGenerated;
+    boolean isId;
+    EntityModel entityModel;
 
-    public EntityField(Map<String, EntityModel> entities, FieldInfo fieldInfo, IndexView index) {
+    public EntityField(EntityModel entityModel, Map<String, EntityModel> entities, FieldInfo fieldInfo, IndexView index) {
+        this.entityModel = entityModel;
         this.entities = entities;
         this.name = fieldInfo.name();
         AnnotationInstance column = fieldInfo.annotation(JpaNames.DOTNAME_COLUMN);
@@ -93,10 +97,18 @@ public class EntityField {
                 this.inverseJoinColumn = inverseJoinColumns.asNestedArray()[0].value("name").asString();
             }
         }
+        AnnotationInstance generatedValue = fieldInfo.annotation(JpaNames.DOTNAME_GENERATED_VALUE);
+        this.isGenerated = generatedValue != null;
+        AnnotationInstance id = fieldInfo.annotation(JpaNames.DOTNAME_ID);
+        this.isId = id != null;
     }
 
     public String getFromRowMethod() {
         return this.typeMapper.getFromRowMethod();
+    }
+
+    public SimpleTypeMapper getTypeMapper() {
+        return this.typeMapper;
     }
 
     public Type mappedType() {
@@ -131,7 +143,7 @@ public class EntityField {
             return columnName.toLowerCase();
         // FIXME: should be locale-independent
         if (isManyToOne() || isOneToOneOwning())
-            return name.toLowerCase() + "_id";
+            return name.toLowerCase() + "_" + getInverseEntity().getIdField().name;
         return name.toLowerCase();
     }
 
@@ -181,27 +193,33 @@ public class EntityField {
     }
 
     // FIXME: only for MANY_TO_MANY?
-    public String computedReverseField() {
-        if (reverseField != null)
-            return reverseField;
-        return getInverseRelation().name;
-    }
-
-    // FIXME: only for MANY_TO_MANY?
     private EntityField getRelationOwner() {
         if (reverseField == null)
             return this;
         return getInverseRelation();
     }
 
+    public EntityModel getInverseEntity() {
+        return entities.get(entityClass.name().toString());
+    }
+    
     private EntityField getInverseRelation() {
-        EntityModel otherEntity = entities.get(entityClass.name().toString());
+        EntityModel otherEntity = getInverseEntity();
+        if(reverseField != null) {
+            EntityField otherField = otherEntity.fields.get(reverseField);
+            if(otherField == null)
+                throw new RuntimeException("Cannot find inverse relation field to " + declaringClass + "." + name 
+                                           + " in opposing entity " + entityClass + ": missing reverse field "+reverseField);
+            return otherField;
+        }
         for (EntityField entityField : otherEntity.fields.values()) {
-            if (entityField.isManyToMany() && entityField.entityClass.name().equals(declaringClass.name()))
+            if ((entityField.isManyToMany() 
+                    || entityField.isOneToMany())
+                    && entityField.entityClass.name().equals(declaringClass.name()))
                 return entityField;
         }
         throw new RuntimeException(
-                "Cannot find inverse relation field to " + declaringClass + "." + name + " in entity relation " + entityClass);
+                "Cannot find inverse relation field to " + declaringClass + "." + name + " in opposing entity " + entityClass);
     }
 
     // FIXME: only for MANY_TO_MANY?
@@ -212,11 +230,11 @@ public class EntityField {
         EntityModel ownerEntityModel;
         EntityModel otherEntityModel;
         if (reverseField == null) {
-            ownerEntityModel = getEntityModel();
+            ownerEntityModel = entityModel;
             otherEntityModel = entities.get(entityClass.name().toString());
         } else {
             ownerEntityModel = entities.get(entityClass.name().toString());
-            otherEntityModel = getEntityModel();
+            otherEntityModel = entityModel;
         }
         return ownerEntityModel.tableName + "_" + otherEntityModel.tableName;
     }
@@ -226,11 +244,12 @@ public class EntityField {
         EntityField relationOwner = getRelationOwner();
         if (relationOwner.joinColumn != null)
             return relationOwner.joinColumn;
-        // FIXME: id field hardcoded
-        if (reverseField == null)
-            return getInverseRelation().name + "_id"; // we're not the owner of the join column
+        if (reverseField == null) {
+            EntityField inverseRelation = getInverseRelation();
+            return inverseRelation.name + "_" + inverseRelation.entityModel.getIdField().name; // we're not the owner of the join column
+        }
         // we're not the owner so we know the name of the join relation
-        return name + "_id";
+        return name + "_" + entityModel.getIdField().name;
     }
 
     // FIXME: only for MANY_TO_MANY?
@@ -238,14 +257,9 @@ public class EntityField {
         EntityField relationOwner = getRelationOwner();
         if (relationOwner.inverseJoinColumn != null)
             return relationOwner.inverseJoinColumn;
-        // FIXME: id field hardcoded
         if (reverseField == null)
-            return name + "_id"; // we're the owner of the inverse join column
+            return name + "_" + entityModel.getIdField().name; // we're the owner of the inverse join column
         // we're not the owner but we know the name of the inverse join relation
-        return reverseField + "_id";
-    }
-
-    private EntityModel getEntityModel() {
-        return entities.get(declaringClass.name().toString());
+        return reverseField + "_" + relationOwner.entityModel.getIdField().name;
     }
 }
