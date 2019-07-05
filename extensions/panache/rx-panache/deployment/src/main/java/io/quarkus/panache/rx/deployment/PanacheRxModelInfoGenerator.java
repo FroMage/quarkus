@@ -41,13 +41,7 @@ public class PanacheRxModelInfoGenerator {
 
         String modelType = modelClassName.replace('.', '/');
         String modelSignature = "L" + modelType + ";";
-        // FIXME
-        String tableName;
-        int lastDot = modelClassName.lastIndexOf('.');
-        if (lastDot != -1)
-            tableName = modelClassName.substring(lastDot + 1);
-        else
-            tableName = modelClassName;
+        String tableName = entityModel.tableName;
 
         String modelInfoClassName = modelClassName + PanacheRxEntityEnhancer.RX_MODEL_SUFFIX;
 

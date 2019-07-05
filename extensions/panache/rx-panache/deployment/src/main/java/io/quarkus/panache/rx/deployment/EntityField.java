@@ -237,7 +237,7 @@ public class EntityField {
             ownerEntityModel = getInverseEntity();
             otherEntityModel = entityModel;
         }
-        return ownerEntityModel.tableName + "_" + otherEntityModel.tableName;
+        return ownerEntityModel.entityName + "_" + otherEntityModel.entityName;
     }
 
     // FIXME: only for MANY_TO_MANY?
