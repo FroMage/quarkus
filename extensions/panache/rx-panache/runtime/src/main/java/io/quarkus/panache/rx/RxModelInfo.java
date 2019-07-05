@@ -30,6 +30,8 @@ public interface RxModelInfo<T extends PanacheRxEntityBase<?>> {
     boolean isPersistent(T entity);
 
     boolean isGeneratedId();
+    
+    String getGeneratorSequence();
 
     String getIdName();
 

@@ -1,6 +1,7 @@
 package io.quarkus.panache.rx.deployment;
 
 import java.lang.reflect.Modifier;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,6 +15,8 @@ import javax.persistence.ManyToMany;
 import javax.persistence.Transient;
 
 import org.hibernate.annotations.Target;
+import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
@@ -75,7 +78,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
     private static final DotName DOTNAME_TRANSIENT = DotName.createSimple(Transient.class.getName());
 
-    final Map<String, EntityModel> entities = new HashMap<>();
+    ModelInfo modelInfo = new ModelInfo();
     private IndexView index;
     private ClassInfo panacheRxEntityBaseClassInfo;
 
@@ -86,7 +89,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
     @Override
     public ClassVisitor apply(String className, ClassVisitor outputClassVisitor) {
-        return new ModelEnhancingClassVisitor(className, outputClassVisitor, entities, panacheRxEntityBaseClassInfo);
+        return new ModelEnhancingClassVisitor(className, outputClassVisitor, modelInfo, panacheRxEntityBaseClassInfo);
     }
 
     static class ModelEnhancingClassVisitor extends ClassVisitor {
@@ -96,21 +99,21 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
         // set of name + "/" + descriptor (only for suspected accessor names)
         private Set<String> methods = new HashSet<>();
         private Map<String, EntityField> fields;
-        private Map<String, EntityModel> entities;
         private String thisBinaryName;
         private String superName;
         private String modelName;
         private String modelBinaryName;
         private String modelDesc;
         private ClassInfo panacheRxEntityBaseClassInfo;
+        private ModelInfo modelInfo;
 
         public ModelEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor,
-                Map<String, EntityModel> entities, ClassInfo panacheRxEntityBaseClassInfo) {
+                ModelInfo modelInfo, ClassInfo panacheRxEntityBaseClassInfo) {
             super(Opcodes.ASM6, outputClassVisitor);
             thisName = className;
             thisBinaryName = className.replace('.', '/');
-            this.entities = entities;
-            EntityModel entityModel = entities.get(className);
+            this.modelInfo = modelInfo;
+            EntityModel entityModel = modelInfo.getEntityModel(className);
             this.fields = entityModel != null ? entityModel.fields : null;
             this.panacheRxEntityBaseClassInfo = panacheRxEntityBaseClassInfo;
 
@@ -228,7 +231,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
                 methods.add(methodName + "/" + descriptor);
             MethodVisitor superVisitor = super.visitMethod(access, methodName, descriptor, signature, exceptions);
             return new PanacheRxFieldAccessMethodVisitor(superVisitor, thisBinaryName, methodName, descriptor,
-                    entities);
+                    modelInfo);
         }
 
         @Override
@@ -369,14 +372,34 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
     }
 
     public void collectFields(ClassInfo classInfo) {
-        EntityModel entityModel = new EntityModel(classInfo, entities);
+        EntityModel entityModel = new EntityModel(classInfo, modelInfo);
         for (FieldInfo fieldInfo : classInfo.fields()) {
             if (Modifier.isPublic(fieldInfo.flags())
                     && !fieldInfo.hasAnnotation(DOTNAME_TRANSIENT)) {
-                EntityField field = new EntityField(entityModel, entities, fieldInfo, index);
+                EntityField field = new EntityField(entityModel, fieldInfo, index);
                 entityModel.addField(field);
             }
+            collectSequenceGenerators(fieldInfo.annotations());
         }
-        entities.put(classInfo.name().toString(), entityModel);
+        collectSequenceGenerators(classInfo.classAnnotations());
+        modelInfo.addEntityModel(entityModel);
+    }
+
+    private void collectSequenceGenerators(Collection<AnnotationInstance> classAnnotations) {
+        for (AnnotationInstance annotation : classAnnotations) {
+            if(annotation.name().equals(JpaNames.DOTNAME_SEQUENCE_GENERATORS)) {
+                for (AnnotationInstance sequenceGenerator : annotation.value().asNestedArray()) {
+                    collectSequenceGenerator(sequenceGenerator);
+                }
+            }else if(annotation.name().equals(JpaNames.DOTNAME_SEQUENCE_GENERATOR)) {
+                collectSequenceGenerator(annotation);
+            }
+        }
+    }
+
+    private void collectSequenceGenerator(AnnotationInstance sequenceGenerator) {
+        String name = sequenceGenerator.value("name").asString();
+        AnnotationValue sequenceName = sequenceGenerator.value("sequenceName");
+        modelInfo.addSequenceGenerator(name, sequenceName != null ? sequenceName.asString() : name);
     }
 }

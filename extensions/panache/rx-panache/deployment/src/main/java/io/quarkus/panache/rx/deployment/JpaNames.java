@@ -12,6 +12,8 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.SequenceGenerators;
 import javax.persistence.Temporal;
 
 import org.jboss.jandex.DotName;
@@ -65,4 +67,6 @@ public class JpaNames {
     static final DotName DOTNAME_JOIN_TABLE = DotName.createSimple(JoinTable.class.getName());
     static final DotName DOTNAME_GENERATED_VALUE = DotName.createSimple(GeneratedValue.class.getName());
     static final DotName DOTNAME_ID = DotName.createSimple(Id.class.getName());
+    static final DotName DOTNAME_SEQUENCE_GENERATORS = DotName.createSimple(SequenceGenerators.class.getName());
+    static final DotName DOTNAME_SEQUENCE_GENERATOR = DotName.createSimple(SequenceGenerator.class.getName());
 }

@@ -1,6 +1,5 @@
 package io.quarkus.panache.rx.deployment;
 
-import java.util.Map;
 import java.util.function.BiFunction;
 
 import org.objectweb.asm.ClassVisitor;
@@ -9,25 +8,26 @@ import org.objectweb.asm.Opcodes;
 
 public class PanacheRxFieldAccessEnhancer implements BiFunction<String, ClassVisitor, ClassVisitor> {
 
-    private Map<String, EntityModel> entities;
 
-    public PanacheRxFieldAccessEnhancer(Map<String, EntityModel> entities) {
-        this.entities = entities;
+    private ModelInfo modelInfo;
+
+    public PanacheRxFieldAccessEnhancer(ModelInfo modelInfo) {
+        this.modelInfo = modelInfo;
     }
 
     @Override
     public ClassVisitor apply(String className, ClassVisitor outputClassVisitor) {
-        return new FieldAccessClassVisitor(className, outputClassVisitor, entities);
+        return new FieldAccessClassVisitor(className, outputClassVisitor, modelInfo);
     }
 
     static class FieldAccessClassVisitor extends ClassVisitor {
 
-        private Map<String, EntityModel> entities;
         private String classBinaryName;
+        private ModelInfo modelInfo;
 
-        public FieldAccessClassVisitor(String className, ClassVisitor outputClassVisitor, Map<String, EntityModel> entities) {
+        public FieldAccessClassVisitor(String className, ClassVisitor outputClassVisitor, ModelInfo modelInfo) {
             super(Opcodes.ASM6, outputClassVisitor);
-            this.entities = entities;
+            this.modelInfo = modelInfo;
             this.classBinaryName = className.replace('.', '/');
         }
 
@@ -35,7 +35,7 @@ public class PanacheRxFieldAccessEnhancer implements BiFunction<String, ClassVis
         public MethodVisitor visitMethod(int access, String methodName, String descriptor, String signature,
                 String[] exceptions) {
             MethodVisitor superVisitor = super.visitMethod(access, methodName, descriptor, signature, exceptions);
-            return new PanacheRxFieldAccessMethodVisitor(superVisitor, classBinaryName, methodName, descriptor, entities);
+            return new PanacheRxFieldAccessMethodVisitor(superVisitor, classBinaryName, methodName, descriptor, modelInfo);
         }
     }
 }

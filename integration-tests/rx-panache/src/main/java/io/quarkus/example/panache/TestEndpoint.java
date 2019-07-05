@@ -1337,9 +1337,14 @@ public class TestEndpoint {
                                 Assertions.assertEquals(relation.myId, relations.get(0).myId);
                                 
                                 return entity.delete();
-                            }).thenApply(v -> {
-                                return "OK";
                             });
+                }).thenCompose(v -> {
+                    RxGeneratedIdSequence sequenceEntity = new RxGeneratedIdSequence();
+                    return sequenceEntity.save();
+                }).thenApply(sequenceEntity -> {
+                    // this sequence starts at 1, unlike hibernate_sequence which must be above
+                    Assertions.assertEquals(1, sequenceEntity.myId);
+                    return "OK";
                 });
     }
 }

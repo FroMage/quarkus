@@ -114,13 +114,13 @@ public final class PanacheRxResourceProcessor {
 
         for (String rxModelClass : rxModelClasses) {
             transformers.produce(new BytecodeTransformerBuildItem(rxModelClass, rxModelEnhancer));
-            PanacheRxModelInfoGenerator.generateModelClass(rxModelClass, rxModelEnhancer.entities, generatedClasses);
+            PanacheRxModelInfoGenerator.generateModelClass(rxModelClass, rxModelEnhancer.modelInfo, generatedClasses);
             //            nonJpaModelBuildItems.produce(new NonJpaModelBuildItem(rxModelClass));
         }
 
-        if (!rxModelEnhancer.entities.isEmpty()) {
+        if (rxModelEnhancer.modelInfo.hasEntities()) {
             PanacheRxFieldAccessEnhancer panacheFieldAccessEnhancer = new PanacheRxFieldAccessEnhancer(
-                    rxModelEnhancer.entities);
+                    rxModelEnhancer.modelInfo);
             for (ClassInfo classInfo : applicationIndex.getIndex().getKnownClasses()) {
                 String className = classInfo.name().toString();
                 if (!rxModelClasses.contains(className)) {

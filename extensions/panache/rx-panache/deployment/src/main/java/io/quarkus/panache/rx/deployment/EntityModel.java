@@ -11,13 +11,13 @@ public class EntityModel {
     final String superClassName;
     final Map<String, EntityField> fields = new LinkedHashMap<>();
     final String tableName;
+    final ModelInfo modelInfo;
     private EntityField idField;
-    private Map<String, EntityModel> entities;
 
-    public EntityModel(ClassInfo classInfo, Map<String, EntityModel> entities) {
+    public EntityModel(ClassInfo classInfo, ModelInfo modelInfo) {
         this.name = classInfo.name().toString();
         this.superClassName = classInfo.superName().toString();
-        this.entities = entities;
+        this.modelInfo = modelInfo;
         // FIXME: read @Table annotation
         this.tableName = classInfo.simpleName();
     }
@@ -34,7 +34,7 @@ public class EntityModel {
                 return field;
         }
         if (superClassName != null)
-            return entities.get(superClassName).getIdField();
+            return modelInfo.getEntityModel(superClassName).getIdField();
         
         throw new RuntimeException("Failed to find ID field for entity " + name);
     }

@@ -1,7 +1,5 @@
 package io.quarkus.panache.rx.deployment;
 
-import java.util.Map;
-
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -10,18 +8,18 @@ import io.quarkus.panache.common.deployment.JavaBeanUtil;
 class PanacheRxFieldAccessMethodVisitor extends MethodVisitor {
 
     private final String methodName;
-    private Map<String, EntityModel> entities;
     private String owner;
     private String methodDescriptor;
+    private ModelInfo modelInfo;
 
     PanacheRxFieldAccessMethodVisitor(MethodVisitor methodVisitor, String owner,
             String methodName, String methodDescriptor,
-            Map<String, EntityModel> entities) {
+            ModelInfo modelInfo) {
         super(Opcodes.ASM6, methodVisitor);
         this.owner = owner;
         this.methodName = methodName;
         this.methodDescriptor = methodDescriptor;
-        this.entities = entities;
+        this.modelInfo = modelInfo;
     }
 
     @Override
@@ -56,7 +54,7 @@ class PanacheRxFieldAccessMethodVisitor extends MethodVisitor {
      * @param className a dot-separated class name
      */
     boolean isEntityField(String className, String fieldName) {
-        EntityModel entityModel = entities.get(className);
+        EntityModel entityModel = modelInfo.getEntityModel(className);
         if (entityModel == null)
             return false;
         EntityField field = entityModel.fields.get(fieldName);

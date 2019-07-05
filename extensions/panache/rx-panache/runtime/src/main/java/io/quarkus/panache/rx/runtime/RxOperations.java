@@ -36,7 +36,7 @@ public class RxOperations {
         CompletionStage<?> saveOrUpdate = modelInfo.toTuple(entity).thenCompose(t -> {
             if (!entity.isPersistent()) {
                 if(modelInfo.isGeneratedId()) {
-                    return preparedQuery(pool, "SELECT nextval('hibernate_sequence') AS id")
+                    return preparedQuery(pool, "SELECT nextval('"+modelInfo.getGeneratorSequence()+"') AS id")
                         .thenApply(rowset -> rowset.iterator().next().getLong("id")).thenCompose(id -> {
                             return persist(pool, entity, modelInfo, t, id);
                         });

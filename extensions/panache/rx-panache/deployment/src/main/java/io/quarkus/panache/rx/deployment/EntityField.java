@@ -1,7 +1,5 @@
 package io.quarkus.panache.rx.deployment;
 
-import java.util.Map;
-
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
@@ -26,17 +24,16 @@ public class EntityField {
     private String columnName;
     private SimpleTypeMapper typeMapper;
     private ClassInfo declaringClass;
-    private Map<String, EntityModel> entities;
     private String joinTable;
     private String joinColumn;
     private String inverseJoinColumn;
     boolean isGenerated;
+    private String generator;
     boolean isId;
     EntityModel entityModel;
 
-    public EntityField(EntityModel entityModel, Map<String, EntityModel> entities, FieldInfo fieldInfo, IndexView index) {
+    public EntityField(EntityModel entityModel, FieldInfo fieldInfo, IndexView index) {
         this.entityModel = entityModel;
-        this.entities = entities;
         this.name = fieldInfo.name();
         AnnotationInstance column = fieldInfo.annotation(JpaNames.DOTNAME_COLUMN);
         if (column != null) {
@@ -98,7 +95,11 @@ public class EntityField {
             }
         }
         AnnotationInstance generatedValue = fieldInfo.annotation(JpaNames.DOTNAME_GENERATED_VALUE);
-        this.isGenerated = generatedValue != null;
+        if(generatedValue != null) {
+            this.isGenerated = true;
+            AnnotationValue value = generatedValue.value("generator");
+            this.generator = value != null ? value.asString() : "hibernate_sequence";
+        }
         AnnotationInstance id = fieldInfo.annotation(JpaNames.DOTNAME_ID);
         this.isId = id != null;
     }
@@ -200,7 +201,7 @@ public class EntityField {
     }
 
     public EntityModel getInverseEntity() {
-        return entities.get(entityClass.name().toString());
+        return entityModel.modelInfo.getEntityModel(entityClass.name().toString());
     }
     
     private EntityField getInverseRelation() {
@@ -231,9 +232,9 @@ public class EntityField {
         EntityModel otherEntityModel;
         if (reverseField == null) {
             ownerEntityModel = entityModel;
-            otherEntityModel = entities.get(entityClass.name().toString());
+            otherEntityModel = getInverseEntity();
         } else {
-            ownerEntityModel = entities.get(entityClass.name().toString());
+            ownerEntityModel = getInverseEntity();
             otherEntityModel = entityModel;
         }
         return ownerEntityModel.tableName + "_" + otherEntityModel.tableName;
@@ -261,5 +262,9 @@ public class EntityField {
             return name + "_" + entityModel.getIdField().name; // we're the owner of the inverse join column
         // we're not the owner but we know the name of the inverse join relation
         return reverseField + "_" + relationOwner.entityModel.getIdField().name;
+    }
+
+    public String generatorSequence() {
+        return entityModel.modelInfo.getSequenceName(generator);
     }
 }

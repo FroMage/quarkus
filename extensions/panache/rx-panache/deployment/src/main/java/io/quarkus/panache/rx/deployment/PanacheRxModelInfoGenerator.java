@@ -2,7 +2,6 @@ package io.quarkus.panache.rx.deployment;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -23,7 +22,6 @@ import io.quarkus.gizmo.FunctionCreator;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
-import io.quarkus.panache.rx.PanacheRxEntity;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.PanacheRxQuery;
 import io.quarkus.panache.rx.RxModelInfo;
@@ -35,11 +33,11 @@ import io.reactiverse.axle.pgclient.Tuple;
 
 public class PanacheRxModelInfoGenerator {
 
-    public static void generateModelClass(String modelClassName, Map<String, EntityModel> entities,
+    public static void generateModelClass(String modelClassName, ModelInfo modelInfo,
             BuildProducer<GeneratedClassBuildItem> generatedClasses) {
 
         List<EntityField> fields = new ArrayList<>();
-        EntityModel entityModel = collectFields(entities, modelClassName, fields);
+        EntityModel entityModel = collectFields(modelInfo, modelClassName, fields);
 
         String modelType = modelClassName.replace('.', '/');
         String modelSignature = "L" + modelType + ";";
@@ -125,7 +123,7 @@ public class PanacheRxModelInfoGenerator {
         getTableName.returnValue(getTableName.load(tableName));
 
         // toTuple
-        createToTuple(modelClass, modelClassName, fields, owningRelations, entities, idField);
+        createToTuple(modelClass, modelClassName, fields, owningRelations, idField);
 
         // afterSave
         createAfterSave(modelClass, modelClassName, fields, idField);
@@ -218,7 +216,19 @@ public class PanacheRxModelInfoGenerator {
             MethodCreator isGeneratedId = modelClass.getMethodCreator("isGeneratedId", boolean.class);
             isGeneratedId.returnValue(isGeneratedId.load(idField.isGenerated));
             isGeneratedId.close();
+        }
 
+        {
+            MethodCreator getGeneratorSequence = modelClass.getMethodCreator("getGeneratorSequence", String.class);
+            if(idField.isGenerated) {
+                getGeneratorSequence.returnValue(getGeneratorSequence.load(idField.generatorSequence()));
+            } else {
+                getGeneratorSequence.returnValue(getGeneratorSequence.loadNull());
+            }
+            getGeneratorSequence.close();
+        }
+
+        {
             MethodCreator getIdName = modelClass.getMethodCreator("getIdName", String.class);
             getIdName.returnValue(getIdName.load(idField.name));
             getIdName.close();
@@ -314,14 +324,14 @@ public class PanacheRxModelInfoGenerator {
         afterSave.close();
     }
 
-    private static EntityModel collectFields(Map<String, EntityModel> entities, String modelClassName, List<EntityField> fields) {
-        EntityModel entityModel = entities.get(modelClassName);
+    private static EntityModel collectFields(ModelInfo modelInfo, String modelClassName, List<EntityField> fields) {
+        EntityModel entityModel = modelInfo.getEntityModel(modelClassName);
         if (entityModel == null)
             return null;
 
         // collect supertype fields first
         if (entityModel.superClassName != null)
-            collectFields(entities, entityModel.superClassName, fields);
+            collectFields(modelInfo, entityModel.superClassName, fields);
 
         fields.addAll(entityModel.fields.values());
         return entityModel;
@@ -457,7 +467,7 @@ public class PanacheRxModelInfoGenerator {
     }
 
     private static void createToTuple(ClassCreator modelClass, String modelClassName, List<EntityField> fields,
-            int owningRelations, Map<String, EntityModel> entities, EntityField idField) {
+            int owningRelations, EntityField idField) {
         MethodCreator toTuple = modelClass.getMethodCreator("toTuple", CompletionStage.class, modelClassName);
         ResultHandle entityParam = toTuple.getMethodParam(0);
 
