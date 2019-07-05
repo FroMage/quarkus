@@ -2,7 +2,6 @@ package io.quarkus.panache.rx.deployment;
 
 import java.lang.reflect.Modifier;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -236,10 +235,10 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
         @Override
         public void visitEnd() {
-            
+
             // add our package-private persistent field
             super.visitField(Opcodes.ACC_SYNTHETIC, RX_PERSISTENT_FIELD_NAME, "Z", null, null);
-            
+
             // no-arg constructor 
             MethodVisitor mv;
             if (!defaultConstructorPresent) {
@@ -387,11 +386,11 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
     private void collectSequenceGenerators(Collection<AnnotationInstance> classAnnotations) {
         for (AnnotationInstance annotation : classAnnotations) {
-            if(annotation.name().equals(JpaNames.DOTNAME_SEQUENCE_GENERATORS)) {
+            if (annotation.name().equals(JpaNames.DOTNAME_SEQUENCE_GENERATORS)) {
                 for (AnnotationInstance sequenceGenerator : annotation.value().asNestedArray()) {
                     collectSequenceGenerator(sequenceGenerator);
                 }
-            }else if(annotation.name().equals(JpaNames.DOTNAME_SEQUENCE_GENERATOR)) {
+            } else if (annotation.name().equals(JpaNames.DOTNAME_SEQUENCE_GENERATOR)) {
                 collectSequenceGenerator(annotation);
             }
         }

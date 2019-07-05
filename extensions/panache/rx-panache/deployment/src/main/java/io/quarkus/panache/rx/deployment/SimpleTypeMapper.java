@@ -18,12 +18,12 @@ public class SimpleTypeMapper {
     }
 
     public SimpleTypeMapper(DotName forType, String fromRowMethod, String toTupleMethod,
-                            String setIdMethod, String getIdMethod) {
+            String setIdMethod, String getIdMethod) {
         this(forType, fromRowMethod, toTupleMethod);
         this.setIdMethod = setIdMethod;
         this.getIdMethod = getIdMethod;
     }
-    
+
     public DotName getEntityFieldTypeName() {
         return forType;
     }
@@ -44,7 +44,7 @@ public class SimpleTypeMapper {
     public String getGetIdMethod() {
         return getIdMethod;
     }
-    
+
     public String getSetIdMethod() {
         return setIdMethod;
     }

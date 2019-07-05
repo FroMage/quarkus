@@ -35,11 +35,11 @@ public class RxOperations {
         // FIXME: custom id generation
         CompletionStage<?> saveOrUpdate = modelInfo.toTuple(entity).thenCompose(t -> {
             if (!entity.isPersistent()) {
-                if(modelInfo.isGeneratedId()) {
-                    return preparedQuery(pool, "SELECT nextval('"+modelInfo.getGeneratorSequence()+"') AS id")
-                        .thenApply(rowset -> rowset.iterator().next().getLong("id")).thenCompose(id -> {
-                            return persist(pool, entity, modelInfo, t, id);
-                        });
+                if (modelInfo.isGeneratedId()) {
+                    return preparedQuery(pool, "SELECT nextval('" + modelInfo.getGeneratorSequence() + "') AS id")
+                            .thenApply(rowset -> rowset.iterator().next().getLong("id")).thenCompose(id -> {
+                                return persist(pool, entity, modelInfo, t, id);
+                            });
                 } else {
                     return persist(pool, entity, modelInfo, t, modelInfo.getId(entity));
                 }
@@ -50,7 +50,8 @@ public class RxOperations {
         return attachStackTrace(saveOrUpdate.thenCompose(v -> modelInfo.afterSave(entity)).thenApply(v -> entity));
     }
 
-    private static <T extends PanacheRxEntityBase<?>> CompletionStage<PgRowSet> persist(PgPool pool, T entity, RxModelInfo<T> modelInfo, Tuple t, Object id) {
+    private static <T extends PanacheRxEntityBase<?>> CompletionStage<PgRowSet> persist(PgPool pool, T entity,
+            RxModelInfo<T> modelInfo, Tuple t, Object id) {
         // non-persisted tuples are missing their id
         Tuple withId = Tuple.tuple();
         withId.addValue(id);
@@ -59,7 +60,7 @@ public class RxOperations {
         }
         return preparedQuery(pool, modelInfo.insertStatement(), withId).thenApply(rowset -> {
             modelInfo.markPersistent(entity);
-            if(modelInfo.isGeneratedId())
+            if (modelInfo.isGeneratedId())
                 modelInfo.setId(entity, id);
             return rowset;
         });
@@ -70,7 +71,8 @@ public class RxOperations {
         @SuppressWarnings("unchecked")
         RxModelInfo<T> modelInfo = (RxModelInfo<T>) entity.getModelInfo();
         return attachStackTrace(modelInfo.beforeDelete(entity)
-                .thenCompose(v -> pool.preparedQuery("DELETE FROM " + modelInfo.getTableName() + " WHERE "+modelInfo.getIdName()+" = $1",
+                .thenCompose(v -> pool.preparedQuery(
+                        "DELETE FROM " + modelInfo.getTableName() + " WHERE " + modelInfo.getIdName() + " = $1",
                         Tuple.of(modelInfo.getId(entity))))
                 // ignoreElement
                 .thenApply(rowset -> null));
@@ -115,9 +117,9 @@ public class RxOperations {
         return state.thenApply(v -> zipper.apply(results));
     }
 
-//    public static boolean isPersistent(PanacheRxEntityBase<?> entity) {
-//        return entity._getId() != null;
-//    }
+    //    public static boolean isPersistent(PanacheRxEntityBase<?> entity) {
+    //        return entity._getId() != null;
+    //    }
 
     //
     // Private stuff
@@ -224,7 +226,8 @@ public class RxOperations {
             String joinTable, String ownerJoinColumn, String otherJoinColumn) {
         // SELECT other.* FROM Other as other LEFT JOIN OwnerOther as ownerOther on other.id = ownerOther.other_id WHERE ownerOther.owner_id = ?
         String query = "SELECT other.* FROM " + getEntityName(otherModelInfo) + " AS other "
-                + " LEFT JOIN " + joinTable + " AS ownerOther ON other."+otherModelInfo.getIdName()+" = ownerOther." + otherJoinColumn
+                + " LEFT JOIN " + joinTable + " AS ownerOther ON other." + otherModelInfo.getIdName() + " = ownerOther."
+                + otherJoinColumn
                 + " WHERE ownerOther." + ownerJoinColumn + " = $1";
         PgPool pool = getPgPool();
         return queryToEntityStream(otherModelInfo, preparedQuery(pool, query, Tuple.of(ownerId)));
@@ -248,12 +251,13 @@ public class RxOperations {
 
     public static CompletionStage<?> findById(RxModelInfo<?> modelInfo, Object id) {
         PgPool pool = getPgPool();
-        return preparedQuery(pool, "SELECT * FROM " + modelInfo.getTableName() + " WHERE "+ modelInfo.getIdName() +" = $1", Tuple.of(id))
-                .thenApply(rowset -> {
-                    if (rowset.size() == 1)
-                        return modelInfo.fromRow(rowset.iterator().next());
-                    return null;
-                });
+        return preparedQuery(pool, "SELECT * FROM " + modelInfo.getTableName() + " WHERE " + modelInfo.getIdName() + " = $1",
+                Tuple.of(id))
+                        .thenApply(rowset -> {
+                            if (rowset.size() == 1)
+                                return modelInfo.fromRow(rowset.iterator().next());
+                            return null;
+                        });
     }
 
     public static PanacheRxQuery<?> find(RxModelInfo<?> modelInfo, String query, Object... params) {
@@ -522,7 +526,8 @@ public class RxOperations {
 
         return deleteOperation
                 // collect ids
-                .thenCompose(v -> ReactiveStreams.fromPublisher(manyToManys).map(elem -> Tuple.of(ownerId, ((RxModelInfo)elem.getModelInfo()).getId(elem)))
+                .thenCompose(v -> ReactiveStreams.fromPublisher(manyToManys)
+                        .map(elem -> Tuple.of(ownerId, ((RxModelInfo) elem.getModelInfo()).getId(elem)))
                         .toList().run())
                 // insert relations
                 .thenCompose(batch -> preparedBatch(pgPool, insertQuery, batch))

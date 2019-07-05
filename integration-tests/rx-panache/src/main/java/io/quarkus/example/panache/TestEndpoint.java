@@ -1315,27 +1315,27 @@ public class TestEndpoint {
         return oneRelation.save()
                 .thenCompose(savedOneRelation -> {
                     Assertions.assertTrue(savedOneRelation.isPersistent());
-                    
+
                     entity.oneRelation = CompletableFuture.completedFuture(savedOneRelation);
-                    return relation.save(); 
+                    return relation.save();
                 })
                 .thenCompose(savedRelation -> {
                     Assertions.assertTrue(savedRelation.isPersistent());
-                    
+
                     entity.myId = "foo";
                     entity.relations = ReactiveStreams.of(relation).buildRs();
-                    
+
                     return entity.save()
-                            .thenCompose(savedEntity -> RxCustomIdEntity.<RxCustomIdEntity>findById("foo"))
+                            .thenCompose(savedEntity -> RxCustomIdEntity.<RxCustomIdEntity> findById("foo"))
                             .thenCompose(loadedEntity -> {
                                 Assertions.assertEquals(loadedEntity.myId, entity.myId);
-                                
+
                                 return toList(loadedEntity.relations);
                             }).thenCompose(relations -> {
-                                
+
                                 Assertions.assertEquals(1, relations.size());
                                 Assertions.assertEquals(relation.myId, relations.get(0).myId);
-                                
+
                                 return entity.delete();
                             });
                 }).thenCompose(v -> {

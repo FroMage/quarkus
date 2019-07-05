@@ -138,7 +138,7 @@ public final class PanacheRxResourceProcessor {
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     void configure(PanacheRxConfig config,
-                   LaunchModeBuildItem launchMode,
+            LaunchModeBuildItem launchMode,
             DataSourceConfig dataSourceConfig,
             ModelClassesBuildItem modelClasses,
             PgPoolImporterTemplate template,
@@ -170,22 +170,22 @@ public final class PanacheRxResourceProcessor {
                 });
 
         String generation = config.generation.orElseGet(() -> {
-            switch(launchMode.getLaunchMode()) {
-          case DEVELOPMENT:
-              return "update";
-          case TEST:
-              return "create";
-          default:
-              return "none";
+            switch (launchMode.getLaunchMode()) {
+                case DEVELOPMENT:
+                    return "update";
+                case TEST:
+                    return "create";
+                default:
+                    return "none";
             }
         });
-        if(!generation.equals("none")) {
+        if (!generation.equals("none")) {
             // FIXME: same defaults as reactivepgclient
             template.updateSchema(modelClasses.modelClasses,
-                                  generation,
-                                  dataSourceConfig.url.orElse(null),
-                                  dataSourceConfig.username.orElse(null),
-                                  dataSourceConfig.password.orElse(null));
+                    generation,
+                    dataSourceConfig.url.orElse(null),
+                    dataSourceConfig.username.orElse(null),
+                    dataSourceConfig.password.orElse(null));
         }
 
         //raise exception if explicit file is not present (i.e. not the default)

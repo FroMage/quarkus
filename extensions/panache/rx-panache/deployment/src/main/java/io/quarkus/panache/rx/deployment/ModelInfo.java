@@ -20,8 +20,8 @@ public class ModelInfo {
     }
 
     public void addSequenceGenerator(String name, String sequenceName) {
-        if(sequenceGenerators.containsKey(name))
-            throw new IllegalArgumentException("Sequence generator "+name+" already declared");
+        if (sequenceGenerators.containsKey(name))
+            throw new IllegalArgumentException("Sequence generator " + name + " already declared");
         sequenceGenerators.put(name, sequenceName);
     }
 

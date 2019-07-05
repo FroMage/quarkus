@@ -13,8 +13,8 @@ public class RxCustomIdEntityOneRelation extends PanacheRxEntityBase<RxCustomIdE
 
     @Id
     public String myId;
-    
+
     @OneToMany(mappedBy = "oneRelation")
     public Publisher<RxCustomIdEntity> entities;
-    
+
 }

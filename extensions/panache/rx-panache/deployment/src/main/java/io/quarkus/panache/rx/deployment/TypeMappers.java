@@ -34,7 +34,8 @@ public class TypeMappers {
             new SimpleTypeMapper(DOTNAME_SQL_DATE, "getSqlDate", "storeSqlDate", "setSqlDateId", null),
             new SimpleTypeMapper(DOTNAME_SQL_TIME, "getSqlTime", "storeSqlTime"),
             new SimpleTypeMapper(DOTNAME_SQL_TIMESTAMP, "getSqlTimestamp", "storeSqlTimestamp"),
-            new SimpleTypeMapper(DOTNAME_UTIL_DATE, "getUtilDateAsTimestamp", "storeUtilDateAsTimestamp", "setUtilDateId", null) {
+            new SimpleTypeMapper(DOTNAME_UTIL_DATE, "getUtilDateAsTimestamp", "storeUtilDateAsTimestamp", "setUtilDateId",
+                    null) {
                 public SimpleTypeMapper getMostPreciseMapper(FieldInfo fieldInfo) {
                     AnnotationInstance temporal = fieldInfo.annotation(DOTNAME_TEMPORAL);
                     if (temporal != null && temporal.value() != null) {

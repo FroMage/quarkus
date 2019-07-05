@@ -8,7 +8,6 @@ import org.objectweb.asm.Opcodes;
 
 public class PanacheRxFieldAccessEnhancer implements BiFunction<String, ClassVisitor, ClassVisitor> {
 
-
     private ModelInfo modelInfo;
 
     public PanacheRxFieldAccessEnhancer(ModelInfo modelInfo) {

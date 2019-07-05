@@ -95,7 +95,7 @@ public class EntityField {
             }
         }
         AnnotationInstance generatedValue = fieldInfo.annotation(JpaNames.DOTNAME_GENERATED_VALUE);
-        if(generatedValue != null) {
+        if (generatedValue != null) {
             this.isGenerated = true;
             AnnotationValue value = generatedValue.value("generator");
             this.generator = value != null ? value.asString() : "hibernate_sequence";
@@ -203,18 +203,18 @@ public class EntityField {
     public EntityModel getInverseEntity() {
         return entityModel.modelInfo.getEntityModel(entityClass.name().toString());
     }
-    
+
     private EntityField getInverseRelation() {
         EntityModel otherEntity = getInverseEntity();
-        if(reverseField != null) {
+        if (reverseField != null) {
             EntityField otherField = otherEntity.fields.get(reverseField);
-            if(otherField == null)
-                throw new RuntimeException("Cannot find inverse relation field to " + declaringClass + "." + name 
-                                           + " in opposing entity " + entityClass + ": missing reverse field "+reverseField);
+            if (otherField == null)
+                throw new RuntimeException("Cannot find inverse relation field to " + declaringClass + "." + name
+                        + " in opposing entity " + entityClass + ": missing reverse field " + reverseField);
             return otherField;
         }
         for (EntityField entityField : otherEntity.fields.values()) {
-            if ((entityField.isManyToMany() 
+            if ((entityField.isManyToMany()
                     || entityField.isOneToMany())
                     && entityField.entityClass.name().equals(declaringClass.name()))
                 return entityField;

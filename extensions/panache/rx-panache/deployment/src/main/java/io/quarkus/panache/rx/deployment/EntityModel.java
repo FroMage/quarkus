@@ -23,30 +23,30 @@ public class EntityModel {
         this.modelInfo = modelInfo;
         this.entityName = classInfo.simpleName();
         AnnotationInstance table = classInfo.classAnnotation(JpaNames.DOTNAME_TABLE);
-        if(table != null) {
+        if (table != null) {
             AnnotationValue value = table.value("name");
-            if(value != null)
+            if (value != null)
                 tableName = value.asString();
         }
-        if(tableName == null)
+        if (tableName == null)
             tableName = entityName;
 
     }
 
     public EntityField getIdField() {
-        if(idField == null)
+        if (idField == null)
             idField = computeIdField();
         return idField;
     }
 
     private EntityField computeIdField() {
         for (EntityField field : fields.values()) {
-            if(field.isId)
+            if (field.isId)
                 return field;
         }
         if (superClassName != null)
             return modelInfo.getEntityModel(superClassName).getIdField();
-        
+
         throw new RuntimeException("Failed to find ID field for entity " + name);
     }
 

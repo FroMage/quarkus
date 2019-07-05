@@ -23,7 +23,7 @@ public class RxDataTypes {
 
     // 
     // Methods to/from Row
-    
+
     public static char getCharacter(Row row, String column) {
         return row.getString(column).charAt(0);
     }
@@ -328,125 +328,146 @@ public class RxDataTypes {
 
     //
     // Methods used by ClassInfo.getId/setId for boxing/unboxing
-    
+
     public static boolean setBooleanId(Object id) {
-        if(id instanceof Boolean)
+        if (id instanceof Boolean)
             return ((Boolean) id).booleanValue();
-        throw new IllegalArgumentException("Cannot convert to boolean: "+id);
+        throw new IllegalArgumentException("Cannot convert to boolean: " + id);
     }
+
     public static Object getBooleanId(boolean id) {
         return id;
     }
+
     public static Boolean setBoxedBooleanId(Object id) {
         return setBooleanId(id);
     }
 
     public static char setCharacterId(Object id) {
-        if(id instanceof Character)
+        if (id instanceof Character)
             return ((Character) id).charValue();
-        throw new IllegalArgumentException("Cannot convert to char: "+id);
+        throw new IllegalArgumentException("Cannot convert to char: " + id);
     }
+
     public static Object getCharacterId(char id) {
         return id;
     }
+
     public static Character setBoxedCharacterId(Object id) {
         return setCharacterId(id);
     }
-    
+
     public static byte setByteId(Object id) {
-        if(id instanceof Number)
+        if (id instanceof Number)
             return ((Number) id).byteValue();
-        throw new IllegalArgumentException("Cannot convert to byte: "+id);
+        throw new IllegalArgumentException("Cannot convert to byte: " + id);
     }
+
     public static Object getByteId(byte id) {
         return id;
     }
+
     public static Byte setBoxedByteId(Object id) {
         return setByteId(id);
     }
-    
+
     public static short setShortId(Object id) {
-        if(id instanceof Number)
+        if (id instanceof Number)
             return ((Number) id).shortValue();
-        throw new IllegalArgumentException("Cannot convert to short: "+id);
+        throw new IllegalArgumentException("Cannot convert to short: " + id);
     }
+
     public static Object getShortId(short id) {
         return id;
     }
+
     public static Short setBoxedShortId(Object id) {
         return setShortId(id);
     }
-    
+
     public static int setIntegerId(Object id) {
-        if(id instanceof Number)
+        if (id instanceof Number)
             return ((Number) id).intValue();
-        throw new IllegalArgumentException("Cannot convert to int: "+id);
+        throw new IllegalArgumentException("Cannot convert to int: " + id);
     }
+
     public static Object getIntegerId(int id) {
         return id;
     }
+
     public static Integer setBoxedIntegerId(Object id) {
         return setIntegerId(id);
     }
 
     public static long setLongId(Object id) {
-        if(id instanceof Number)
+        if (id instanceof Number)
             return ((Number) id).longValue();
-        throw new IllegalArgumentException("Cannot convert to long: "+id);
+        throw new IllegalArgumentException("Cannot convert to long: " + id);
     }
+
     public static Object getLongId(long id) {
         return id;
     }
+
     public static Long setBoxedLongId(Object id) {
         return setLongId(id);
     }
 
     public static float setFloatId(Object id) {
-        if(id instanceof Number)
+        if (id instanceof Number)
             return ((Number) id).floatValue();
-        throw new IllegalArgumentException("Cannot convert to float: "+id);
+        throw new IllegalArgumentException("Cannot convert to float: " + id);
     }
+
     public static Object getFloatId(float id) {
         return id;
     }
+
     public static Float setBoxedFloatId(Object id) {
         return setFloatId(id);
     }
-    
+
     public static double setDoubleId(Object id) {
-        if(id instanceof Number)
+        if (id instanceof Number)
             return ((Number) id).doubleValue();
-        throw new IllegalArgumentException("Cannot convert to double: "+id);
+        throw new IllegalArgumentException("Cannot convert to double: " + id);
     }
+
     public static Object getDoubleId(double id) {
         return id;
     }
+
     public static Double setBoxedDoubleId(Object id) {
         return setDoubleId(id);
     }
+
     public static String setStringId(Object id) {
-        if(id instanceof String)
+        if (id instanceof String)
             return (String) id;
-        throw new IllegalArgumentException("Cannot convert to int: "+id);
+        throw new IllegalArgumentException("Cannot convert to int: " + id);
     }
+
     public static java.util.Date setUtilDateId(Object id) {
-        if(id instanceof java.util.Date)
+        if (id instanceof java.util.Date)
             return (java.util.Date) id;
-        throw new IllegalArgumentException("Cannot convert to java.util.date: "+id);
+        throw new IllegalArgumentException("Cannot convert to java.util.date: " + id);
     }
+
     public static java.sql.Date setSqlDateId(Object id) {
-        if(id instanceof java.sql.Date)
+        if (id instanceof java.sql.Date)
             return (java.sql.Date) id;
-        throw new IllegalArgumentException("Cannot convert to java.sql.date: "+id);
+        throw new IllegalArgumentException("Cannot convert to java.sql.date: " + id);
     }
+
     public static BigDecimal setBigDecimalId(Object id) {
-        if(id instanceof BigDecimal)
+        if (id instanceof BigDecimal)
             return (BigDecimal) id;
-        throw new IllegalArgumentException("Cannot convert to BigDecimal: "+id);
+        throw new IllegalArgumentException("Cannot convert to BigDecimal: " + id);
     }
+
     public static BigInteger setBigIntegerId(Object id) {
-        if(id instanceof BigInteger)
+        if (id instanceof BigInteger)
             return (BigInteger) id;
-        throw new IllegalArgumentException("Cannot convert to BigInteger: "+id);
+        throw new IllegalArgumentException("Cannot convert to BigInteger: " + id);
     }
 }

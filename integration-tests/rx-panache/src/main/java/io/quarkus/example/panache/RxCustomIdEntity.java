@@ -16,7 +16,7 @@ public class RxCustomIdEntity extends PanacheRxEntityBase<RxCustomIdEntity> {
 
     @Id
     public String myId;
-    
+
     @ManyToMany
     public Publisher<RxCustomIdEntityRelation> relations;
 
