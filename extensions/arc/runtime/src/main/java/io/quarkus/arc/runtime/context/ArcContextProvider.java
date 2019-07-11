@@ -3,6 +3,8 @@ package io.quarkus.arc.runtime.context;
 import java.util.Collection;
 import java.util.Map;
 
+import javax.enterprise.context.spi.Contextual;
+
 import org.eclipse.microprofile.context.ThreadContext;
 import org.eclipse.microprofile.context.spi.ThreadContextController;
 import org.eclipse.microprofile.context.spi.ThreadContextProvider;
@@ -36,7 +38,7 @@ public class ArcContextProvider implements ThreadContextProvider {
         }
 
         // capture all instances
-        Collection<ContextInstanceHandle<?>> instancesToPropagate = arc.requestContext().getAll();
+        Map<Contextual<?>, ContextInstanceHandle<?>> capturedContext = arc.requestContext().getContext();
         return () -> {
             // can be called later on, we should retrieve the container again
             ArcContainer arcContainer = Arc.container();
@@ -48,17 +50,14 @@ public class ArcContextProvider implements ThreadContextProvider {
             // this is executed on another thread, context can but doesn't need to be active here
             if (isContextActiveOnThisThread(arcContainer)) {
                 // context active, store current state, feed it new one and restore state afterwards
-                Collection<ContextInstanceHandle<?>> instancesToRestore = requestContext.getAll();
-                requestContext.deactivate();
-                requestContext.activate(instancesToPropagate);
+                Map<Contextual<?>, ContextInstanceHandle<?>> contextToRestore = requestContext.setContext(capturedContext);
                 controller = () -> {
                     // clean up, reactivate context with previous values
-                    requestContext.deactivate();
-                    requestContext.activate(instancesToRestore);
+                    requestContext.setContext(contextToRestore);
                 };
             } else {
                 // context not active, activate and pass it new instance, deactivate afterwards
-                requestContext.activate(instancesToPropagate);
+                requestContext.setContext(capturedContext);
                 controller = () -> {
                     requestContext.deactivate();
                 };
