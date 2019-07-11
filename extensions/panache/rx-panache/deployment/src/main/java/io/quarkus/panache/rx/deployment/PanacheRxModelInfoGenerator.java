@@ -252,12 +252,10 @@ public class PanacheRxModelInfoGenerator {
         MethodCreator beforeDelete = modelClass.getMethodCreator("beforeDelete", CompletionStage.class, modelClassName);
         AssignableResultHandle ret = beforeDelete.createVariable(CompletionStage.class);
 
-        //  CompletionStage<Void> ret = CompletableFuture.completedFuture(null);
+        //  CompletionStage<Void> ret = RxOperations.nullFuture();
         beforeDelete.assign(ret,
                 beforeDelete.invokeStaticMethod(
-                        MethodDescriptor.ofMethod(CompletableFuture.class, "completedFuture", CompletableFuture.class,
-                                Object.class),
-                        beforeDelete.loadNull()));
+                        MethodDescriptor.ofMethod(RxOperations.class, "nullFuture", CompletableFuture.class)));
 
         for (EntityField field : fields) {
             if (field.isManyToMany() && field.isOwningRelation()) {
@@ -296,12 +294,10 @@ public class PanacheRxModelInfoGenerator {
 
         AssignableResultHandle ret = afterSave.createVariable(CompletionStage.class);
 
-        //  CompletionStage<Void> ret = CompletableFuture.completedFuture(null);
+        //  CompletionStage<Void> ret = RxOperations.nullFuture();
         afterSave.assign(ret,
                 afterSave.invokeStaticMethod(
-                        MethodDescriptor.ofMethod(CompletableFuture.class, "completedFuture", CompletableFuture.class,
-                                Object.class),
-                        afterSave.loadNull()));
+                        MethodDescriptor.ofMethod(RxOperations.class, "nullFuture", CompletableFuture.class)));
 
         for (EntityField field : fields) {
             if (field.isManyToMany() && field.isOwningRelation()) {
@@ -563,10 +559,10 @@ public class PanacheRxModelInfoGenerator {
                             CompletionStage[].class),
                     myFunction.getInstance(), myArgs));
         } else {
-            // return CompletableFuture.completedFuture(myTuple)
+            // return RxOperations.completedFuture(myTuple)
             creator.returnValue(
                     creator.invokeStaticMethod(
-                            MethodDescriptor.ofMethod(CompletableFuture.class, "completedFuture", CompletableFuture.class,
+                            MethodDescriptor.ofMethod(RxOperations.class, "completedFuture", CompletableFuture.class,
                                     Object.class),
                             myTuple));
         }

@@ -37,4 +37,10 @@ public class PanacheRxFunctionalityTest {
         RestAssured.when().get("/test/relations").then().body(is("OK"));
         RestAssured.when().get("/test/ids").then().body(is("OK"));
     }
+
+    @Test
+    public void testPanacheTransactions() throws Exception {
+        RestAssured.when().get("/test/transaction-1").then().statusCode(500);
+        RestAssured.when().get("/test/transaction-2").then().body(is("OK"));
+    }
 }

@@ -9,6 +9,10 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import javax.transaction.SystemException;
+import javax.transaction.TransactionManager;
+
+import org.eclipse.microprofile.context.ThreadContext;
 import org.eclipse.microprofile.reactive.streams.operators.ReactiveStreams;
 import org.reactivestreams.Publisher;
 
@@ -18,7 +22,7 @@ import io.quarkus.panache.common.Sort;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.PanacheRxQuery;
 import io.quarkus.panache.rx.RxModelInfo;
-import io.reactiverse.axle.pgclient.PgPool;
+import io.reactiverse.axle.pgclient.PgClient;
 import io.reactiverse.axle.pgclient.PgRowSet;
 import io.reactiverse.axle.pgclient.Row;
 import io.reactiverse.axle.pgclient.Tuple;
@@ -29,7 +33,7 @@ public class RxOperations {
     // instance methods
 
     public static <T extends PanacheRxEntityBase<?>> CompletionStage<? extends T> save(T entity) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         @SuppressWarnings("unchecked")
         RxModelInfo<T> modelInfo = (RxModelInfo<T>) entity.getModelInfo();
         // FIXME: custom id generation
@@ -50,7 +54,7 @@ public class RxOperations {
         return attachStackTrace(saveOrUpdate.thenCompose(v -> modelInfo.afterSave(entity)).thenApply(v -> entity));
     }
 
-    private static <T extends PanacheRxEntityBase<?>> CompletionStage<PgRowSet> persist(PgPool pool, T entity,
+    private static <T extends PanacheRxEntityBase<?>> CompletionStage<PgRowSet> persist(PgClient pool, T entity,
             RxModelInfo<T> modelInfo, Tuple t, Object id) {
         // non-persisted tuples are missing their id
         Tuple withId = Tuple.tuple();
@@ -67,7 +71,7 @@ public class RxOperations {
     }
 
     public static <T extends PanacheRxEntityBase<?>> CompletionStage<Void> delete(T entity) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         @SuppressWarnings("unchecked")
         RxModelInfo<T> modelInfo = (RxModelInfo<T>) entity.getModelInfo();
         return attachStackTrace(modelInfo.beforeDelete(entity)
@@ -105,7 +109,7 @@ public class RxOperations {
     public static <T, R> CompletionStage<R> zipArray(Function<? super Object[], ? extends R> zipper,
             @SuppressWarnings("unchecked") CompletionStage<? extends T>... sources) {
         Object[] results = new Object[sources.length];
-        CompletionStage<?> state = CompletableFuture.completedFuture(null);
+        CompletionStage<?> state = nullFuture();
         for (int i = 0; i < sources.length; i++) {
             CompletionStage<? extends T> completionStage = sources[i];
             int finalI = i;
@@ -117,16 +121,27 @@ public class RxOperations {
         return state.thenApply(v -> zipper.apply(results));
     }
 
-    //    public static boolean isPersistent(PanacheRxEntityBase<?> entity) {
-    //        return entity._getId() != null;
-    //    }
-
     //
     // Private stuff
 
-    public static PgPool getPgPool() {
-        io.reactiverse.pgclient.PgPool pgPool = Arc.container().instance(io.reactiverse.pgclient.PgPool.class).get();
-        return PgPool.newInstance(pgPool);
+    public static CompletableFuture<Void> nullFuture() {
+        return completedFuture(null);
+    }
+
+    public static <U> CompletableFuture<U> completedFuture(U value) {
+        ThreadContext threadContext = Arc.container().instance(ThreadContext.class).get();
+        return threadContext.withContextCapture(CompletableFuture.completedFuture(value));
+    }
+
+    public static <U> CompletionStage<U> failedFuture(Exception e) {
+        CompletableFuture<U> cf = new CompletableFuture<>();
+        cf.completeExceptionally(e);
+        ThreadContext threadContext = Arc.container().instance(ThreadContext.class).get();
+        return threadContext.withContextCapture(cf);
+    }
+
+    public static PgClient getPgClient() {
+        return Arc.container().instance(PgClient.class).get();
     }
 
     public static Tuple bindParameters(Object[] params) {
@@ -229,7 +244,7 @@ public class RxOperations {
                 + " LEFT JOIN " + joinTable + " AS ownerOther ON other." + otherModelInfo.getIdName() + " = ownerOther."
                 + otherJoinColumn
                 + " WHERE ownerOther." + ownerJoinColumn + " = $1";
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         return queryToEntityStream(otherModelInfo, preparedQuery(pool, query, Tuple.of(ownerId)));
     }
 
@@ -250,7 +265,7 @@ public class RxOperations {
     }
 
     public static CompletionStage<?> findById(RxModelInfo<?> modelInfo, Object id) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         return preparedQuery(pool, "SELECT * FROM " + modelInfo.getTableName() + " WHERE " + modelInfo.getIdName() + " = $1",
                 Tuple.of(id))
                         .thenApply(rowset -> {
@@ -270,7 +285,7 @@ public class RxOperations {
 
     public static PanacheRxQuery<?> find(RxModelInfo<?> modelInfo, String query, Sort sort, Object... params) {
         String findQuery = translateOrderedQuery(createFindQuery(modelInfo, query, paramCount(params)));
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         // FIXME: check for duplicate ORDER BY clause?
         String sortedQuery = sort != null ? findQuery + sort.toOrderBy() : findQuery;
         Tuple tuple = bindParameters(params);
@@ -285,7 +300,7 @@ public class RxOperations {
         String findQuery = createFindQuery(modelInfo, query, paramCount(params));
         Tuple tuple = Tuple.tuple();
         findQuery = translateNamedQuery(findQuery, params, tuple);
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         // FIXME: check for duplicate ORDER BY clause?
         String sortedQuery = sort != null ? findQuery + sort.toOrderBy() : findQuery;
         return new PanacheRxQueryImpl<>(pool, modelInfo, findQuery, sortedQuery, tuple);
@@ -363,13 +378,13 @@ public class RxOperations {
     }
 
     public static PanacheRxQuery<?> findAll(RxModelInfo<?> modelInfo) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         String query = "SELECT * FROM " + modelInfo.getTableName();
         return new PanacheRxQueryImpl<>(pool, modelInfo, query, query, Tuple.tuple());
     }
 
     public static PanacheRxQuery<?> findAll(RxModelInfo<?> modelInfo, Sort sort) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         String query = "SELECT * FROM " + modelInfo.getTableName();
         String sortedQuery = query + sort.toOrderBy();
         return new PanacheRxQueryImpl<>(pool, modelInfo, query, sortedQuery, Tuple.tuple());
@@ -394,13 +409,13 @@ public class RxOperations {
     }
 
     public static CompletionStage<Long> count(RxModelInfo<?> modelInfo) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         return pool.query("SELECT COUNT(*) FROM " + modelInfo.getTableName())
                 .thenApply(rowset -> rowset.iterator().next().getLong(0));
     }
 
     public static CompletionStage<Long> count(RxModelInfo<?> modelInfo, String query, Object... params) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         String countQuery = createCountQuery(modelInfo, query, paramCount(params));
         countQuery = translateOrderedQuery(countQuery);
         return preparedQuery(pool, countQuery, bindParameters(params))
@@ -408,7 +423,7 @@ public class RxOperations {
     }
 
     public static CompletionStage<Long> count(RxModelInfo<?> modelInfo, String query, Map<String, Object> params) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         Tuple tuple = Tuple.tuple();
         String countQuery = createCountQuery(modelInfo, query, paramCount(params));
         countQuery = translateNamedQuery(countQuery, params, tuple);
@@ -421,12 +436,12 @@ public class RxOperations {
     }
 
     public static CompletionStage<Long> deleteAll(RxModelInfo<?> modelInfo) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         return pool.query("DELETE FROM " + modelInfo.getTableName()).thenApply(rowset -> (long) rowset.rowCount());
     }
 
     public static CompletionStage<Long> delete(RxModelInfo<?> modelInfo, String query, Object... params) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         String deleteQuery = createDeleteQuery(modelInfo, query, paramCount(params));
         deleteQuery = translateOrderedQuery(deleteQuery);
         return preparedQuery(pool, deleteQuery, bindParameters(params))
@@ -434,7 +449,7 @@ public class RxOperations {
     }
 
     public static CompletionStage<Long> delete(RxModelInfo<?> modelInfo, String query, Map<String, Object> params) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         String deleteQuery = createDeleteQuery(modelInfo, query, paramCount(params));
         Tuple tuple = Tuple.tuple();
         deleteQuery = translateNamedQuery(deleteQuery, params, tuple);
@@ -447,7 +462,7 @@ public class RxOperations {
     }
 
     public static CompletionStage<Void> save(Iterable<? extends PanacheRxEntityBase<?>> entities) {
-        CompletionStage<?> ret = CompletableFuture.completedFuture(null);
+        CompletionStage<?> ret = nullFuture();
         for (PanacheRxEntityBase<?> entity : entities) {
             ret = ret.thenCompose(v -> entity.save());
         }
@@ -464,7 +479,7 @@ public class RxOperations {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static CompletionStage<Void> save(Stream<? extends PanacheRxEntityBase<?>> entities) {
-        return entities.reduce((CompletionStage) CompletableFuture.completedFuture(null),
+        return entities.reduce((CompletionStage) nullFuture(),
                 (ret, entity) -> entity.save(),
                 (c1, c2) -> c1.thenCompose(v -> c2))
                 .thenApply(v -> null);
@@ -476,40 +491,40 @@ public class RxOperations {
     }
 
     public static CompletionStage<Long> executeUpdate(String query, Object... params) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         query = translateOrderedQuery(query);
         return preparedQuery(pool, query, bindParameters(params))
                 .thenApply(rowset -> (long) rowset.rowCount());
     }
 
     public static CompletionStage<Long> executeUpdate(String query, Map<String, Object> params) {
-        PgPool pool = getPgPool();
+        PgClient pool = getPgClient();
         Tuple tuple = Tuple.tuple();
         query = translateNamedQuery(query, params, tuple);
         return preparedQuery(pool, query, tuple)
                 .thenApply(rowset -> (long) rowset.rowCount());
     }
 
-    private static CompletionStage<PgRowSet> preparedQuery(PgPool pool, String query, Tuple tuple) {
+    private static CompletionStage<PgRowSet> preparedQuery(PgClient pool, String query, Tuple tuple) {
         System.err.println("[SQL] Prepare query: " + query + " with " + tuple);
         return pool.preparedQuery(query, tuple);
     }
 
-    private static CompletionStage<PgRowSet> preparedQuery(PgPool pool, String query) {
+    private static CompletionStage<PgRowSet> preparedQuery(PgClient pool, String query) {
         System.err.println("[SQL] Prepare query: " + query);
         return pool.preparedQuery(query);
     }
 
-    private static CompletionStage<PgRowSet> preparedBatch(PgPool pool, String query, List<Tuple> args) {
+    private static CompletionStage<PgRowSet> preparedBatch(PgClient pool, String query, List<Tuple> args) {
         System.err.println("[SQL] Prepare batch: " + query + " with " + args);
         return pool.preparedBatch(query, args);
     }
 
     public static CompletionStage<Void> deleteManyToMany(Object ownerId, String deleteQuery) {
         // deleteQuery: "DELETE FROM RxRelationEntity_RxManyToManyEntity WHERE relations_id = $1"
-        PgPool pgPool = getPgPool();
+        PgClient PgClient = getPgClient();
         // DELETE existing
-        CompletionStage<PgRowSet> deleteOperation = preparedQuery(pgPool, deleteQuery, Tuple.of(ownerId));
+        CompletionStage<PgRowSet> deleteOperation = preparedQuery(PgClient, deleteQuery, Tuple.of(ownerId));
         return deleteOperation.thenApply(v -> null);
     }
 
@@ -517,9 +532,9 @@ public class RxOperations {
             String deleteQuery, String insertQuery) {
         // deleteQuery: "DELETE FROM RxRelationEntity_RxManyToManyEntity WHERE relations_id = $1"
         // insertQuery: "INSERT INTO RxRelationEntity_RxManyToManyEntity (relations_id, manytomanys_id) VALUES ($1, $2)"
-        PgPool pgPool = getPgPool();
+        PgClient PgClient = getPgClient();
         // DELETE existing
-        CompletionStage<PgRowSet> deleteOperation = preparedQuery(pgPool, deleteQuery, Tuple.of(ownerId));
+        CompletionStage<PgRowSet> deleteOperation = preparedQuery(PgClient, deleteQuery, Tuple.of(ownerId));
 
         if (manyToManys == null)
             return deleteOperation.thenApply(v -> null);
@@ -530,7 +545,19 @@ public class RxOperations {
                         .map(elem -> Tuple.of(ownerId, ((RxModelInfo) elem.getModelInfo()).getId(elem)))
                         .toList().run())
                 // insert relations
-                .thenCompose(batch -> preparedBatch(pgPool, insertQuery, batch))
+                .thenCompose(batch -> preparedBatch(PgClient, insertQuery, batch))
                 .thenApply(v -> null);
+    }
+
+    public static TransactionManager getTransactionManager() {
+        return Arc.container().instance(TransactionManager.class).get();
+    }
+    
+    public static void setRollbackOnly() {
+        try {
+            getTransactionManager().setRollbackOnly();
+        } catch (IllegalStateException | SystemException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

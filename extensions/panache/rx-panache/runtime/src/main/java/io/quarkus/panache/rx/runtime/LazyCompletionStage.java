@@ -25,9 +25,7 @@ public class LazyCompletionStage<T> implements CompletionStage<T> {
                     try {
                         cs = csSource.call();
                     } catch (Exception e) {
-                        CompletableFuture<T> cf = new CompletableFuture<>();
-                        cf.completeExceptionally(e);
-                        cs = cf;
+                        cs = RxOperations.failedFuture(e);
                     }
                     csSource = null;
                 }

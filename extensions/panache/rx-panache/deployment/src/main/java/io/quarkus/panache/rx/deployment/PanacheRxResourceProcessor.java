@@ -26,6 +26,7 @@ import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 
 import io.quarkus.arc.ClientProxy;
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -47,6 +48,7 @@ import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.PanacheRxRepository;
 import io.quarkus.panache.rx.PanacheRxRepositoryBase;
 import io.quarkus.panache.rx.runtime.PgPoolImporterTemplate;
+import io.quarkus.panache.rx.runtime.client.TransactionPgClients;
 import io.quarkus.reactive.pg.client.deployment.PgPoolBuildItem;
 import io.quarkus.reactive.pg.client.runtime.DataSourceConfig;
 
@@ -133,6 +135,11 @@ public final class PanacheRxResourceProcessor {
         Set<String> allModelClasses = new HashSet<>(rxModelClasses);
         allModelClasses.add(PanacheRxEntity.class.getName());
         return new ModelClassesBuildItem(allModelClasses);
+    }
+
+    @BuildStep
+    AdditionalBeanBuildItem registerBean() {
+        return AdditionalBeanBuildItem.unremovableOf(TransactionPgClients.class);
     }
 
     @BuildStep

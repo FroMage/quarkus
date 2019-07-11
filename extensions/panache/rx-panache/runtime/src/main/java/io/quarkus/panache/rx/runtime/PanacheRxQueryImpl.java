@@ -14,7 +14,7 @@ import io.quarkus.panache.common.Page;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.PanacheRxQuery;
 import io.quarkus.panache.rx.RxModelInfo;
-import io.reactiverse.axle.pgclient.PgPool;
+import io.reactiverse.axle.pgclient.PgClient;
 import io.reactiverse.axle.pgclient.PgRowSet;
 import io.reactiverse.axle.pgclient.Row;
 import io.reactiverse.axle.pgclient.Tuple;
@@ -27,7 +27,7 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
 
     private String sortedQuery;
 
-    private PgPool pool;
+    private PgClient client;
 
     /*
      * We store the pageSize and apply it for each request because
@@ -39,8 +39,8 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
 
     private RxModelInfo<Entity> modelInfo;
 
-    PanacheRxQueryImpl(PgPool pool, RxModelInfo<Entity> modelInfo, String findQuery, String sortedQuery, Tuple params) {
-        this.pool = pool;
+    PanacheRxQueryImpl(PgClient client, RxModelInfo<Entity> modelInfo, String findQuery, String sortedQuery, Tuple params) {
+        this.client = client;
         this.findQuery = findQuery;
         this.sortedQuery = sortedQuery;
         this.params = params;
@@ -124,7 +124,7 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
             if (lcQuery.startsWith("select * "))
                 countQueryHql = countQueryHql.substring(9);
             String countQuery = "SELECT COUNT(*) " + countQueryHql;
-            count = pool.preparedQuery(countQuery, params)
+            count = client.preparedQuery(countQuery, params)
                     .thenApply(pgRowSet -> pgRowSet.iterator().next().getLong(0));
         }
         return count;
@@ -161,7 +161,7 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
     @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public <T extends Entity> CompletionStage<List<T>> list() {
-        return (CompletionStage) queryToEntityList(modelInfo, pool.preparedQuery(page(this.sortedQuery), params));
+        return (CompletionStage) queryToEntityList(modelInfo, client.preparedQuery(page(this.sortedQuery), params));
     }
 
     private String page(String query) {
@@ -175,13 +175,13 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
     @Override
     @SuppressWarnings("unchecked")
     public <T extends Entity> Publisher<T> stream() {
-        return (Publisher<T>) queryToEntityStream(modelInfo, pool.preparedQuery(page(this.sortedQuery), params));
+        return (Publisher<T>) queryToEntityStream(modelInfo, client.preparedQuery(page(this.sortedQuery), params));
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Entity> CompletionStage<T> firstResult() {
-        CompletionStage<PgRowSet> rows = pool.preparedQuery(page1(this.sortedQuery), params);
+        CompletionStage<PgRowSet> rows = client.preparedQuery(page1(this.sortedQuery), params);
         return rows.thenApply(rowset -> {
             io.reactiverse.pgclient.PgRowSet coreRowSet = rowset.getDelegate();
             return (T) (rowset.size() > 0 ? coreRowToEntity(modelInfo, coreRowSet.iterator().next()) : null);
@@ -191,7 +191,7 @@ public class PanacheRxQueryImpl<Entity extends PanacheRxEntityBase<?>> implement
     @Override
     @SuppressWarnings("unchecked")
     public <T extends Entity> CompletionStage<T> singleResult() {
-        CompletionStage<PgRowSet> rows = pool.preparedQuery(page(this.sortedQuery), params);
+        CompletionStage<PgRowSet> rows = client.preparedQuery(page(this.sortedQuery), params);
         return rows.thenApply(rowset -> {
             io.reactiverse.pgclient.PgRowSet coreRowSet = rowset.getDelegate();
             if (rowset.size() == 0)

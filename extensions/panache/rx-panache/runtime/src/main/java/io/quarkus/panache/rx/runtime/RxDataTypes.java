@@ -133,7 +133,7 @@ public class RxDataTypes {
         // FIXME: type of ID
         Long id = row.getLong(column);
         if (id == null)
-            return CompletableFuture.completedFuture(null);
+            return (CompletionStage<T>)(CompletionStage)RxOperations.nullFuture();
         return (CompletionStage<T>) RxOperations.deferCompletionStage(() -> RxOperations.findById(modelInfo, id));
     }
 

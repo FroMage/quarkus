@@ -80,15 +80,15 @@ public class EntityField {
 
         AnnotationInstance joinTable = fieldInfo.annotation(JpaNames.DOTNAME_JOIN_TABLE);
         if (joinTable != null) {
-            AnnotationValue value = column.value("name");
+            AnnotationValue value = joinTable.value("name");
             if (value != null)
                 this.joinTable = value.asString();
-            AnnotationValue joinColumns = column.value("joinColumns");
+            AnnotationValue joinColumns = joinTable.value("joinColumns");
             if (joinColumns != null) {
                 // FIXME: multiple id columns
                 this.joinColumn = joinColumns.asNestedArray()[0].value("name").asString();
             }
-            AnnotationValue inverseJoinColumns = column.value("inverseJoinColumns");
+            AnnotationValue inverseJoinColumns = joinTable.value("inverseJoinColumns");
             if (inverseJoinColumns != null) {
                 // FIXME: multiple id columns
                 this.inverseJoinColumn = inverseJoinColumns.asNestedArray()[0].value("name").asString();

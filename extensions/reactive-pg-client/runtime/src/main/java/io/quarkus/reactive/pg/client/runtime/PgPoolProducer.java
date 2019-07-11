@@ -2,6 +2,7 @@ package io.quarkus.reactive.pg.client.runtime;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
+import javax.enterprise.inject.Typed;
 import javax.inject.Singleton;
 
 import io.reactiverse.pgclient.PgPool;
@@ -19,18 +20,21 @@ public class PgPoolProducer {
         this.rxPgPool = io.reactiverse.reactivex.pgclient.PgPool.newInstance(pgPool);
     }
 
+    @Typed(value = PgPool.class)
     @Singleton
     @Produces
     public PgPool pgPool() {
         return pgPool;
     }
 
+    @Typed(value = io.reactiverse.axle.pgclient.PgPool.class)
     @Singleton
     @Produces
     public io.reactiverse.axle.pgclient.PgPool axlePgPool() {
         return axlePgPool;
     }
 
+    @Typed(value = io.reactiverse.reactivex.pgclient.PgPool.class)
     @Singleton
     @Produces
     public io.reactiverse.reactivex.pgclient.PgPool rxPgPool() {

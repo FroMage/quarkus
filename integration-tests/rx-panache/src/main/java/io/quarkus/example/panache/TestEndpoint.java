@@ -33,17 +33,24 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
+import javax.transaction.Transactional;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.WebApplicationException;
 
+import org.eclipse.microprofile.context.ThreadContext;
 import org.eclipse.microprofile.reactive.streams.operators.ReactiveStreams;
 import org.junit.jupiter.api.Assertions;
 import org.reactivestreams.Publisher;
+
+import com.arjuna.ats.jta.TransactionManager;
 
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Parameters;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.panache.rx.PanacheRxQuery;
+import io.quarkus.panache.rx.runtime.RxOperations;
+import io.reactiverse.axle.pgclient.PgClient;
 
 /**
  * Various tests covering Panache functionality. All tests should work in both standard JVM and SubstrateVM.
@@ -308,7 +315,7 @@ public class TestEndpoint {
 
                     return testSorting();
                 }).thenCompose(v -> {
-                    CompletionStage<Void> chain = CompletableFuture.completedFuture(null);
+                    CompletionStage<Void> chain = RxOperations.nullFuture();
                     // paging
                     for (int i = 0; i < 7; i++) {
                         int finalI = i;
@@ -574,7 +581,7 @@ public class TestEndpoint {
         return makeSavedRxPerson("")
                 .thenCompose(person -> {
                     RxDog dog = new RxDog("octave", "dalmatian");
-                    dog.owner = CompletableFuture.completedFuture(person);
+                    dog.owner = RxOperations.completedFuture(person);
                     person.dogs = ReactiveStreams.of(dog).buildRs();
                     return dog.save().thenApply(v -> person);
                 });
@@ -840,7 +847,7 @@ public class TestEndpoint {
 
                     return testSortingRepository();
                 }).thenCompose(v -> {
-                    CompletionStage<Void> chain = CompletableFuture.completedFuture(null);
+                    CompletionStage<Void> chain = RxOperations.nullFuture();
                     // paging
                     for (int i = 0; i < 7; i++) {
                         int finalI = i;
@@ -1104,7 +1111,7 @@ public class TestEndpoint {
         return makeSavedRxPersonRepository("")
                 .thenCompose(person -> {
                     RxDog dog = new RxDog("octave", "dalmatian");
-                    dog.owner = CompletableFuture.completedFuture(person);
+                    dog.owner = RxOperations.completedFuture(person);
                     person.dogs = ReactiveStreams.of(dog).buildRs();
                     return rxDogRepository.save(dog).thenApply(v -> person);
                 });
@@ -1112,7 +1119,7 @@ public class TestEndpoint {
 
     @GET
     @Path("datatypes")
-    public CompletionStage<String> testRxDataTypes() {
+    public CompletionStage<String> testRxDataTypes2() {
         RxDataTypeEntity entity = new RxDataTypeEntity();
 
         entity.primitiveBoolean = true;
@@ -1258,7 +1265,7 @@ public class TestEndpoint {
 
         return oneToOne.save()
                 .thenCompose(v -> {
-                    entity.oneToOne = CompletableFuture.completedFuture(oneToOne);
+                    entity.oneToOne = RxOperations.completedFuture(oneToOne);
 
                     return manyToMany.save();
                 }).thenCompose(v -> {
@@ -1316,7 +1323,7 @@ public class TestEndpoint {
                 .thenCompose(savedOneRelation -> {
                     Assertions.assertTrue(savedOneRelation.isPersistent());
 
-                    entity.oneRelation = CompletableFuture.completedFuture(savedOneRelation);
+                    entity.oneRelation = RxOperations.completedFuture(savedOneRelation);
                     return relation.save();
                 })
                 .thenCompose(savedRelation -> {
@@ -1344,6 +1351,38 @@ public class TestEndpoint {
                 }).thenApply(sequenceEntity -> {
                     // this sequence starts at 1, unlike hibernate_sequence which must be above
                     Assertions.assertEquals(1, sequenceEntity.myId);
+                    return "OK";
+                });
+    }
+
+    @Inject
+    PgClient client;
+    
+    @Transactional
+    @GET
+    @Path("transaction-1")
+    public CompletionStage<String> testRxTransaction1() {
+        javax.transaction.TransactionManager tm = TransactionManager.transactionManager();
+        System.err.println("TM1: "+tm);
+        return RxPerson.count()
+                .thenCompose(count -> {
+                    Assertions.assertEquals(0, count);
+                    return makeSavedRxPerson();
+                }).thenCompose(v -> RxPerson.count())
+                .thenApply(count -> {
+                    Assertions.assertEquals(1, count);
+                    throw new WebApplicationException("roll me back");
+                });
+    }
+
+    @GET
+    @Path("transaction-2")
+    public CompletionStage<String> testRxTransaction2() {
+        javax.transaction.TransactionManager tm = TransactionManager.transactionManager();
+        System.err.println("TM2: "+tm);
+        return RxPerson.count()
+                .thenApply(count -> {
+                    Assertions.assertEquals(0, count);
                     return "OK";
                 });
     }
