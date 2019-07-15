@@ -10,13 +10,11 @@ import org.jboss.jandex.Type.Kind;
 import org.objectweb.asm.Opcodes;
 
 import io.quarkus.gizmo.DescriptorUtils;
-import io.quarkus.panache.common.deployment.JavaBeanUtil;
+import io.quarkus.panache.common.deployment.EntityField;
 
-public class EntityField {
+public class RxEntityField extends EntityField {
 
-    String name;
     Type type;
-    String typeDescriptor;
     Type entityClass;
     RelationType relationType;
     String reverseField;
@@ -30,11 +28,11 @@ public class EntityField {
     boolean isGenerated;
     private String generator;
     boolean isId;
-    EntityModel entityModel;
+    RxEntityModel entityModel;
 
-    public EntityField(EntityModel entityModel, FieldInfo fieldInfo, IndexView index) {
+    public RxEntityField(RxEntityModel entityModel, FieldInfo fieldInfo, IndexView index) {
+        super(fieldInfo.name(), DescriptorUtils.typeToString(fieldInfo.type()));
         this.entityModel = entityModel;
-        this.name = fieldInfo.name();
         AnnotationInstance column = fieldInfo.annotation(JpaNames.DOTNAME_COLUMN);
         if (column != null) {
             AnnotationValue value = column.value("name");
@@ -43,7 +41,6 @@ public class EntityField {
         }
         this.type = fieldInfo.type();
         declaringClass = fieldInfo.declaringClass();
-        this.typeDescriptor = DescriptorUtils.typeToString(type);
         ClassInfo typeClass = index.getClassByName(type.name());
         // FIXME: is this right?
         this.isEnum = typeClass != null ? ((typeClass.flags() & Opcodes.ACC_ENUM) != 0) : false;
@@ -148,14 +145,6 @@ public class EntityField {
         return name.toLowerCase();
     }
 
-    public String getGetterName() {
-        return JavaBeanUtil.getGetterName(name, typeDescriptor);
-    }
-
-    public String getSetterName() {
-        return JavaBeanUtil.getSetterName(name);
-    }
-
     public String typeClassName() {
         return type.name().toString();
     }
@@ -179,7 +168,7 @@ public class EntityField {
     public String getToTupleStoreType() {
         if (isEnum)
             return "Ljava/lang/Enum;";
-        return typeDescriptor;
+        return descriptor;
     }
 
     public boolean isOwningRelation() {
@@ -194,26 +183,26 @@ public class EntityField {
     }
 
     // FIXME: only for MANY_TO_MANY?
-    private EntityField getRelationOwner() {
+    private RxEntityField getRelationOwner() {
         if (reverseField == null)
             return this;
         return getInverseRelation();
     }
 
-    public EntityModel getInverseEntity() {
+    public RxEntityModel getInverseEntity() {
         return entityModel.modelInfo.getEntityModel(entityClass.name().toString());
     }
 
-    private EntityField getInverseRelation() {
-        EntityModel otherEntity = getInverseEntity();
+    private RxEntityField getInverseRelation() {
+        RxEntityModel otherEntity = getInverseEntity();
         if (reverseField != null) {
-            EntityField otherField = otherEntity.fields.get(reverseField);
+            RxEntityField otherField = otherEntity.fields.get(reverseField);
             if (otherField == null)
                 throw new RuntimeException("Cannot find inverse relation field to " + declaringClass + "." + name
                         + " in opposing entity " + entityClass + ": missing reverse field " + reverseField);
             return otherField;
         }
-        for (EntityField entityField : otherEntity.fields.values()) {
+        for (RxEntityField entityField : otherEntity.fields.values()) {
             if ((entityField.isManyToMany()
                     || entityField.isOneToMany())
                     && entityField.entityClass.name().equals(declaringClass.name()))
@@ -225,11 +214,11 @@ public class EntityField {
 
     // FIXME: only for MANY_TO_MANY?
     public String joinTable() {
-        EntityField relationOwner = getRelationOwner();
+        RxEntityField relationOwner = getRelationOwner();
         if (relationOwner.joinTable != null)
             return relationOwner.joinTable;
-        EntityModel ownerEntityModel;
-        EntityModel otherEntityModel;
+        RxEntityModel ownerEntityModel;
+        RxEntityModel otherEntityModel;
         if (reverseField == null) {
             ownerEntityModel = entityModel;
             otherEntityModel = getInverseEntity();
@@ -242,11 +231,11 @@ public class EntityField {
 
     // FIXME: only for MANY_TO_MANY?
     public String joinColumn() {
-        EntityField relationOwner = getRelationOwner();
+        RxEntityField relationOwner = getRelationOwner();
         if (relationOwner.joinColumn != null)
             return relationOwner.joinColumn;
         if (reverseField == null) {
-            EntityField inverseRelation = getInverseRelation();
+            RxEntityField inverseRelation = getInverseRelation();
             return inverseRelation.name + "_" + inverseRelation.entityModel.getIdField().name; // we're not the owner of the join column
         }
         // we're not the owner so we know the name of the join relation
@@ -255,7 +244,7 @@ public class EntityField {
 
     // FIXME: only for MANY_TO_MANY?
     public String inverseJoinColumn() {
-        EntityField relationOwner = getRelationOwner();
+        RxEntityField relationOwner = getRelationOwner();
         if (relationOwner.inverseJoinColumn != null)
             return relationOwner.inverseJoinColumn;
         if (reverseField == null)

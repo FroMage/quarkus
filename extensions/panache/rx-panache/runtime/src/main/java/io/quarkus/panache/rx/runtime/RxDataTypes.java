@@ -10,7 +10,6 @@ import java.time.OffsetTime;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import io.quarkus.panache.rx.PanacheRxEntityBase;
@@ -133,7 +132,7 @@ public class RxDataTypes {
         // FIXME: type of ID
         Long id = row.getLong(column);
         if (id == null)
-            return (CompletionStage<T>)(CompletionStage)RxOperations.nullFuture();
+            return (CompletionStage<T>) (CompletionStage) RxOperations.nullFuture();
         return (CompletionStage<T>) RxOperations.deferCompletionStage(() -> RxOperations.findById(modelInfo, id));
     }
 

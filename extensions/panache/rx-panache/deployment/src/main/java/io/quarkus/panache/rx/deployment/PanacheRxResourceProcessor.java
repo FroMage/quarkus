@@ -43,6 +43,7 @@ import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.deployment.builditem.substrate.SubstrateResourceBuildItem;
 import io.quarkus.deployment.configuration.ConfigurationError;
 import io.quarkus.gizmo.ClassOutput;
+import io.quarkus.panache.common.deployment.PanacheFieldAccessEnhancer;
 import io.quarkus.panache.rx.PanacheRxEntity;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.PanacheRxRepository;
@@ -114,16 +115,16 @@ public final class PanacheRxResourceProcessor {
         // even though we don't augment it, we need to collect its id field
         ClassInfo panacheRxEntity = index.getIndex().getClassByName(DOTNAME_PANACHE_RX_ENTITY);
         rxModelEnhancer.collectFields(panacheRxEntity);
+        RxMetamodelInfo modelInfo = rxModelEnhancer.getModelInfo();
 
         for (String rxModelClass : rxModelClasses) {
             transformers.produce(new BytecodeTransformerBuildItem(rxModelClass, rxModelEnhancer));
-            PanacheRxModelInfoGenerator.generateModelClass(rxModelClass, rxModelEnhancer.modelInfo, generatedClasses);
+            PanacheRxModelInfoGenerator.generateModelClass(rxModelClass, modelInfo, generatedClasses);
             //            nonJpaModelBuildItems.produce(new NonJpaModelBuildItem(rxModelClass));
         }
 
-        if (rxModelEnhancer.modelInfo.hasEntities()) {
-            PanacheRxFieldAccessEnhancer panacheFieldAccessEnhancer = new PanacheRxFieldAccessEnhancer(
-                    rxModelEnhancer.modelInfo);
+        if (modelInfo.hasEntities()) {
+            PanacheFieldAccessEnhancer panacheFieldAccessEnhancer = new PanacheFieldAccessEnhancer(modelInfo);
             for (ClassInfo classInfo : applicationIndex.getIndex().getKnownClasses()) {
                 String className = classInfo.name().toString();
                 if (!rxModelClasses.contains(className)) {

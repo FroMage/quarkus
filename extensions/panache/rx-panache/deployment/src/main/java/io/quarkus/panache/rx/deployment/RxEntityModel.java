@@ -1,25 +1,20 @@
 package io.quarkus.panache.rx.deployment;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 
-public class EntityModel {
+import io.quarkus.panache.common.deployment.EntityModel;
 
-    final String name;
-    final String superClassName;
-    final Map<String, EntityField> fields = new LinkedHashMap<>();
+public class RxEntityModel extends EntityModel<RxEntityField> {
+
     final String entityName;
-    final ModelInfo modelInfo;
-    private EntityField idField;
+    final RxMetamodelInfo modelInfo;
+    private RxEntityField idField;
     String tableName;
 
-    public EntityModel(ClassInfo classInfo, ModelInfo modelInfo) {
-        this.name = classInfo.name().toString();
-        this.superClassName = classInfo.superName().toString();
+    public RxEntityModel(ClassInfo classInfo, RxMetamodelInfo modelInfo) {
+        super(classInfo);
         this.modelInfo = modelInfo;
         this.entityName = classInfo.simpleName();
         AnnotationInstance table = classInfo.classAnnotation(JpaNames.DOTNAME_TABLE);
@@ -33,14 +28,14 @@ public class EntityModel {
 
     }
 
-    public EntityField getIdField() {
+    public RxEntityField getIdField() {
         if (idField == null)
             idField = computeIdField();
         return idField;
     }
 
-    private EntityField computeIdField() {
-        for (EntityField field : fields.values()) {
+    private RxEntityField computeIdField() {
+        for (RxEntityField field : fields.values()) {
             if (field.isId)
                 return field;
         }
@@ -50,7 +45,4 @@ public class EntityModel {
         throw new RuntimeException("Failed to find ID field for entity " + name);
     }
 
-    public void addField(EntityField field) {
-        fields.put(field.name, field);
-    }
 }

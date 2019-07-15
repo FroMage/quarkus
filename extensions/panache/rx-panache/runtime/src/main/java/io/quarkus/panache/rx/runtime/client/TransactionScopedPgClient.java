@@ -30,10 +30,10 @@ public class TransactionScopedPgClient extends PgClient {
     private ThreadContext threadContext;
 
     public TransactionScopedPgClient(TransactionManager transactionManager,
-                                     TransactionSynchronizationRegistry tsr,
-                                     PgPool pool,
-                                     ThreadContext threadContext,
-                                     Instance<RequestScopedPgClientHolder> requestScopedEms) {
+            TransactionSynchronizationRegistry tsr,
+            PgPool pool,
+            ThreadContext threadContext,
+            Instance<RequestScopedPgClientHolder> requestScopedEms) {
         super(null);
         this.transactionManager = transactionManager;
         this.tsr = tsr;
@@ -61,7 +61,7 @@ public class TransactionScopedPgClient extends PgClient {
                         try {
                             // FIXME: async?
                             // FIXME: statuses?
-                            if(transactionManager.getStatus() == Status.STATUS_ROLLEDBACK)
+                            if (transactionManager.getStatus() == Status.STATUS_ROLLEDBACK)
                                 tr.rollback();
                             else
                                 tr.commit();
@@ -105,37 +105,37 @@ public class TransactionScopedPgClient extends PgClient {
         return getPgClient()
                 .thenCompose(client -> client.preparedBatch(sql, batch));
     }
-    
+
     @Override
     public CompletionStage<PgRowSet> preparedQuery(String sql) {
         return getPgClient()
                 .thenCompose(client -> client.preparedQuery(sql));
     }
-    
+
     @Override
     public CompletionStage<PgRowSet> preparedQuery(String sql, Tuple arguments) {
         return getPgClient()
                 .thenCompose(client -> client.preparedQuery(sql, arguments));
     }
-    
+
     @Override
     public CompletionStage<PgRowSet> query(String sql) {
         return getPgClient()
                 .thenCompose(client -> client.query(sql));
     }
-    
+
     @Override
     public boolean equals(Object o) {
         // TODO Auto-generated method stub
         return super.equals(o);
     }
-    
+
     @Override
     public int hashCode() {
         // TODO Auto-generated method stub
         return super.hashCode();
     }
-    
+
     @Override
     public String toString() {
         // TODO Auto-generated method stub

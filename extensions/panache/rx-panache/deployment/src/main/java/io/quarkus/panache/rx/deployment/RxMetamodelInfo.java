@@ -3,21 +3,10 @@ package io.quarkus.panache.rx.deployment;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ModelInfo {
-    final Map<String, EntityModel> entities = new HashMap<>();
+import io.quarkus.panache.common.deployment.MetamodelInfo;
+
+public class RxMetamodelInfo extends MetamodelInfo<RxEntityModel> {
     final Map<String, String> sequenceGenerators = new HashMap<>();
-
-    public EntityModel getEntityModel(String className) {
-        return entities.get(className);
-    }
-
-    public void addEntityModel(EntityModel entityModel) {
-        entities.put(entityModel.name, entityModel);
-    }
-
-    public boolean hasEntities() {
-        return !entities.isEmpty();
-    }
 
     public void addSequenceGenerator(String name, String sequenceName) {
         if (sequenceGenerators.containsKey(name))

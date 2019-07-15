@@ -552,7 +552,7 @@ public class RxOperations {
     public static TransactionManager getTransactionManager() {
         return Arc.container().instance(TransactionManager.class).get();
     }
-    
+
     public static void setRollbackOnly() {
         try {
             getTransactionManager().setRollbackOnly();

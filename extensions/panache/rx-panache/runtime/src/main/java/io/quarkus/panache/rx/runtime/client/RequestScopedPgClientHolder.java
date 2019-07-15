@@ -18,17 +18,17 @@ public class RequestScopedPgClientHolder {
     private CompletionStage<PgConnection> con;
 
     public CompletionStage<? extends PgClient> getOrCreatePgClient(PgPool factory) {
-        if(con != null)
+        if (con != null)
             return con;
-        System.err.println("PG CLIENT -> request scoped open "+this);
+        System.err.println("PG CLIENT -> request scoped open " + this);
         con = factory.getConnection();
         return con;
     }
 
     @PreDestroy
     public void destroy() {
-        System.err.println("PG CLIENT -> request scoped close "+this);
-        if(con != null)
+        System.err.println("PG CLIENT -> request scoped close " + this);
+        if (con != null)
             con.thenAccept(con -> con.close());
     }
 }

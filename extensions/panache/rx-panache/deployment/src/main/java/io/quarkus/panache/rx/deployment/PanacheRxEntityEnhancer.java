@@ -2,11 +2,6 @@ package io.quarkus.panache.rx.deployment;
 
 import java.lang.reflect.Modifier;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
 
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -20,8 +15,6 @@ import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
-import org.jboss.jandex.MethodInfo;
-import org.jboss.jandex.Type;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassVisitor;
@@ -31,12 +24,13 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.TypePath;
 
 import io.quarkus.gizmo.DescriptorUtils;
-import io.quarkus.panache.common.deployment.JandexUtil;
+import io.quarkus.panache.common.deployment.EntityField;
+import io.quarkus.panache.common.deployment.PanacheEntityEnhancer;
 import io.quarkus.panache.rx.PanacheRxEntityBase;
 import io.quarkus.panache.rx.RxModelInfo;
 import io.quarkus.panache.rx.runtime.RxOperations;
 
-public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor, ClassVisitor> {
+public class PanacheRxEntityEnhancer extends PanacheEntityEnhancer<RxMetamodelInfo> {
 
     public final static String TRANSIENT_NAME = Transient.class.getName();
     public final static String TRANSIENT_BINARY_NAME = TRANSIENT_NAME.replace('.', '/');
@@ -77,47 +71,32 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
 
     private static final DotName DOTNAME_TRANSIENT = DotName.createSimple(Transient.class.getName());
 
-    ModelInfo modelInfo = new ModelInfo();
     private IndexView index;
-    private ClassInfo panacheRxEntityBaseClassInfo;
 
     public PanacheRxEntityEnhancer(IndexView index) {
+        super(index, PanacheRxResourceProcessor.DOTNAME_PANACHE_RX_ENTITY_BASE);
         this.index = index;
-        panacheRxEntityBaseClassInfo = index.getClassByName(PanacheRxResourceProcessor.DOTNAME_PANACHE_RX_ENTITY_BASE);
+        modelInfo = new RxMetamodelInfo();
     }
 
     @Override
     public ClassVisitor apply(String className, ClassVisitor outputClassVisitor) {
-        return new ModelEnhancingClassVisitor(className, outputClassVisitor, modelInfo, panacheRxEntityBaseClassInfo);
+        return new ModelEnhancingClassVisitor(className, outputClassVisitor, modelInfo, panacheEntityBaseClassInfo);
     }
 
-    static class ModelEnhancingClassVisitor extends ClassVisitor {
+    static class ModelEnhancingClassVisitor extends PanacheEntityClassVisitor<RxEntityField> {
 
-        private String thisName;
         private boolean defaultConstructorPresent;
-        // set of name + "/" + descriptor (only for suspected accessor names)
-        private Set<String> methods = new HashSet<>();
-        private Map<String, EntityField> fields;
-        private String thisBinaryName;
         private String superName;
         private String modelName;
         private String modelBinaryName;
         private String modelDesc;
-        private ClassInfo panacheRxEntityBaseClassInfo;
-        private ModelInfo modelInfo;
 
         public ModelEnhancingClassVisitor(String className, ClassVisitor outputClassVisitor,
-                ModelInfo modelInfo, ClassInfo panacheRxEntityBaseClassInfo) {
-            super(Opcodes.ASM6, outputClassVisitor);
-            thisName = className;
-            thisBinaryName = className.replace('.', '/');
-            this.modelInfo = modelInfo;
-            EntityModel entityModel = modelInfo.getEntityModel(className);
-            this.fields = entityModel != null ? entityModel.fields : null;
-            this.panacheRxEntityBaseClassInfo = panacheRxEntityBaseClassInfo;
-
+                RxMetamodelInfo modelInfo, ClassInfo panacheRxEntityBaseClassInfo) {
+            super(className, outputClassVisitor, modelInfo, panacheRxEntityBaseClassInfo);
             // model field
-            modelName = thisName + RX_MODEL_SUFFIX;
+            modelName = className + RX_MODEL_SUFFIX;
             modelBinaryName = modelName.replace('.', '/');
             modelDesc = "L" + modelBinaryName + ";";
         }
@@ -131,7 +110,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
         @Override
         public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
             if ((access & Opcodes.ACC_PUBLIC) != 0 && fields != null) {
-                EntityField entityField = fields.get(name);
+                RxEntityField entityField = fields.get(name);
                 if (entityField != null) {
                     if (entityField.isOneToMany() || entityField.isManyToMany()) {
                         // must create a fake field for hibernate with the same annotations
@@ -224,13 +203,7 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
                 String[] exceptions) {
             if ("<init>".equals(methodName) && "()V".equals(descriptor))
                 defaultConstructorPresent = true;
-            if (methodName.startsWith("get")
-                    || methodName.startsWith("set")
-                    || methodName.startsWith("is"))
-                methods.add(methodName + "/" + descriptor);
-            MethodVisitor superVisitor = super.visitMethod(access, methodName, descriptor, signature, exceptions);
-            return new PanacheRxFieldAccessMethodVisitor(superVisitor, thisBinaryName, methodName, descriptor,
-                    modelInfo);
+            return super.visitMethod(access, methodName, descriptor, signature, exceptions);
         }
 
         @Override
@@ -270,112 +243,43 @@ public class PanacheRxEntityEnhancer implements BiFunction<String, ClassVisitor,
             mv.visitMaxs(0, 0);
             mv.visitEnd();
 
-            for (MethodInfo method : panacheRxEntityBaseClassInfo.methods()) {
-                if (method.hasAnnotation(JandexUtil.DOTNAME_GENERATE_BRIDGE))
-                    generateMethod(method);
-            }
-
-            generateAccessors();
-
             super.visitEnd();
 
         }
 
-        private void generateMethod(MethodInfo method) {
-            String descriptor = JandexUtil.getDescriptor(method, name -> null);
-            String signature = JandexUtil.getSignature(method, name -> null);
-            List<Type> parameters = method.parameters();
-
-            MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
-                    method.name(),
-                    descriptor,
-                    signature,
-                    null);
-            for (int i = 0; i < parameters.size(); i++) {
-                mv.visitParameter(method.parameterName(i), 0 /* modifiers */);
-            }
-            mv.visitCode();
-            // inject model
+        @Override
+        protected void injectModel(MethodVisitor mv) {
             mv.visitFieldInsn(Opcodes.GETSTATIC, modelBinaryName, RX_MODEL_FIELD_NAME, modelDesc);
-            for (int i = 0; i < parameters.size(); i++) {
-                mv.visitIntInsn(Opcodes.ALOAD, i);
-            }
-            // inject model
-            String forwardingDescriptor = "(" + RX_MODEL_INFO_SIGNATURE + descriptor.substring(1);
-            mv.visitMethodInsn(Opcodes.INVOKESTATIC,
-                    RX_OPERATIONS_BINARY_NAME,
-                    method.name(),
-                    forwardingDescriptor, false);
-            mv.visitInsn(Opcodes.ARETURN);
-            mv.visitMaxs(0, 0);
-            mv.visitEnd();
         }
 
-        private void generateAccessors() {
-            if (fields == null)
-                return;
-            for (EntityField field : fields.values()) {
-                // Getter
-                String getterName = field.getGetterName();
-                String getterDescriptor = "()" + field.typeDescriptor;
-                if (!methods.contains(getterName + "/" + getterDescriptor)) {
-                    MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                            getterName, getterDescriptor, null, null);
-                    mv.visitCode();
-                    mv.visitIntInsn(Opcodes.ALOAD, 0);
-                    mv.visitFieldInsn(Opcodes.GETFIELD, thisBinaryName, field.name, field.typeDescriptor);
-                    int returnCode = JandexUtil.getReturnInstruction(field.typeDescriptor);
-                    mv.visitInsn(returnCode);
-                    mv.visitMaxs(0, 0);
-                    mv.visitEnd();
-                }
-
-                // Setter
-                String setterName = field.getSetterName();
-                String setterDescriptor = "(" + field.typeDescriptor + ")V";
-                if (!methods.contains(setterName + "/" + setterDescriptor)) {
-                    MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC,
-                            setterName, setterDescriptor, null, null);
-                    mv.visitCode();
-                    mv.visitIntInsn(Opcodes.ALOAD, 0);
-                    int loadCode;
-                    switch (field.typeDescriptor) {
-                        case "Z":
-                        case "B":
-                        case "C":
-                        case "S":
-                        case "I":
-                            loadCode = Opcodes.ILOAD;
-                            break;
-                        case "J":
-                            loadCode = Opcodes.LLOAD;
-                            break;
-                        case "F":
-                            loadCode = Opcodes.FLOAD;
-                            break;
-                        case "D":
-                            loadCode = Opcodes.DLOAD;
-                            break;
-                        default:
-                            loadCode = Opcodes.ALOAD;
-                            break;
-                    }
-                    mv.visitIntInsn(loadCode, 1);
-                    mv.visitFieldInsn(Opcodes.PUTFIELD, thisBinaryName, field.name, field.typeDescriptor);
-                    mv.visitInsn(Opcodes.RETURN);
-                    mv.visitMaxs(0, 0);
-                    mv.visitEnd();
-                }
-            }
+        @Override
+        protected String getModelDescriptor() {
+            return RX_MODEL_INFO_SIGNATURE;
         }
+
+        @Override
+        protected String getPanacheOperationsBinaryName() {
+            return RX_OPERATIONS_BINARY_NAME;
+        }
+
+        @Override
+        protected void generateAccessorGetField(MethodVisitor mv, EntityField field) {
+            mv.visitFieldInsn(Opcodes.GETFIELD, thisClass.getInternalName(), field.name, field.descriptor);
+        }
+
+        @Override
+        protected void generateAccessorSetField(MethodVisitor mv, EntityField field) {
+            mv.visitFieldInsn(Opcodes.PUTFIELD, thisClass.getInternalName(), field.name, field.descriptor);
+        }
+
     }
 
     public void collectFields(ClassInfo classInfo) {
-        EntityModel entityModel = new EntityModel(classInfo, modelInfo);
+        RxEntityModel entityModel = new RxEntityModel(classInfo, modelInfo);
         for (FieldInfo fieldInfo : classInfo.fields()) {
             if (Modifier.isPublic(fieldInfo.flags())
                     && !fieldInfo.hasAnnotation(DOTNAME_TRANSIENT)) {
-                EntityField field = new EntityField(entityModel, fieldInfo, index);
+                RxEntityField field = new RxEntityField(entityModel, fieldInfo, index);
                 entityModel.addField(field);
             }
             collectSequenceGenerators(fieldInfo.annotations());

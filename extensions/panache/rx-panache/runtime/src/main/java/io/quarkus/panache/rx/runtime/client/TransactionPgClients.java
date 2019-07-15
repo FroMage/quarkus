@@ -30,13 +30,13 @@ public class TransactionPgClients {
 
     @Inject
     ThreadContext threadContext;
-    
+
     @Singleton
     @Produces
     public PgClient getPgClient() {
-        return new TransactionScopedPgClient(transactionManager, transactionSynchronizationRegistry, 
-                                             pgPool, threadContext,
-                                             requestScopedEntityManagers);
+        return new TransactionScopedPgClient(transactionManager, transactionSynchronizationRegistry,
+                pgPool, threadContext,
+                requestScopedEntityManagers);
     }
 
 }
