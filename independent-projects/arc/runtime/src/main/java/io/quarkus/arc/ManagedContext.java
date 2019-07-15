@@ -2,7 +2,6 @@ package io.quarkus.arc;
 
 import java.util.Collection;
 import java.util.Map;
-
 import javax.enterprise.context.spi.Contextual;
 
 /**
@@ -39,9 +38,8 @@ public interface ManagedContext extends InjectableContext {
         destroy();
         deactivate();
     }
-    
-    
+
     Map<Contextual<?>, ContextInstanceHandle<?>> getContext();
-    
+
     Map<Contextual<?>, ContextInstanceHandle<?>> setContext(Map<Contextual<?>, ContextInstanceHandle<?>> context);
 }

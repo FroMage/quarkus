@@ -25,7 +25,6 @@ import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Stream;
@@ -38,7 +37,6 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.WebApplicationException;
 
-import org.eclipse.microprofile.context.ThreadContext;
 import org.eclipse.microprofile.reactive.streams.operators.ReactiveStreams;
 import org.junit.jupiter.api.Assertions;
 import org.reactivestreams.Publisher;
@@ -1357,13 +1355,13 @@ public class TestEndpoint {
 
     @Inject
     PgClient client;
-    
+
     @Transactional
     @GET
     @Path("transaction-1")
     public CompletionStage<String> testRxTransaction1() {
         javax.transaction.TransactionManager tm = TransactionManager.transactionManager();
-        System.err.println("TM1: "+tm);
+        System.err.println("TM1: " + tm);
         return RxPerson.count()
                 .thenCompose(count -> {
                     Assertions.assertEquals(0, count);
@@ -1379,7 +1377,7 @@ public class TestEndpoint {
     @Path("transaction-2")
     public CompletionStage<String> testRxTransaction2() {
         javax.transaction.TransactionManager tm = TransactionManager.transactionManager();
-        System.err.println("TM2: "+tm);
+        System.err.println("TM2: " + tm);
         return RxPerson.count()
                 .thenApply(count -> {
                     Assertions.assertEquals(0, count);

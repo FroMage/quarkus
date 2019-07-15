@@ -165,7 +165,7 @@ class RequestContext implements ManagedContext {
 
     @Override
     public Map<Contextual<?>, ContextInstanceHandle<?>> setContext(Map<Contextual<?>, ContextInstanceHandle<?>> context) {
-        if(context != null) {
+        if (context != null) {
             for (ContextInstanceHandle<?> instanceHandle : context.values()) {
                 if (!instanceHandle.getBean().getScope().equals(getScope())) {
                     throw new IllegalArgumentException("Invalid bean scope: " + instanceHandle.getBean());
@@ -173,7 +173,7 @@ class RequestContext implements ManagedContext {
             }
         }
         Map<Contextual<?>, ContextInstanceHandle<?>> previousContext = currentContext.get();
-        if(context == null)
+        if (context == null)
             currentContext.remove();
         else
             currentContext.set(context);
