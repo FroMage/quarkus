@@ -11,6 +11,7 @@ public class RxEntityModel extends EntityModel<RxEntityField> {
     final String entityName;
     final RxMetamodelInfo modelInfo;
     private RxEntityField idField;
+    private RxEntityField versionField;
     String tableName;
 
     public RxEntityModel(ClassInfo classInfo, RxMetamodelInfo modelInfo) {
@@ -43,6 +44,24 @@ public class RxEntityModel extends EntityModel<RxEntityField> {
             return modelInfo.getEntityModel(superClassName).getIdField();
 
         throw new RuntimeException("Failed to find ID field for entity " + name);
+    }
+
+    public RxEntityField getVersionField() {
+        if (versionField == null)
+            versionField = computeVersionField();
+        return versionField;
+    }
+
+    private RxEntityField computeVersionField() {
+        for (RxEntityField field : fields.values()) {
+            if (field.isVersion)
+                return field;
+        }
+        if (superClassName != null) {
+            RxEntityModel superModel = modelInfo.getEntityModel(superClassName);
+            return superModel != null ? superModel.getIdField() : null;
+        }
+        return null;
     }
 
 }

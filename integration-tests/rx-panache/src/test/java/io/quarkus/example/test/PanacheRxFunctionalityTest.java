@@ -36,6 +36,7 @@ public class PanacheRxFunctionalityTest {
         RestAssured.when().get("/test/datatypes").then().body(is("OK"));
         RestAssured.when().get("/test/relations").then().body(is("OK"));
         RestAssured.when().get("/test/ids").then().body(is("OK"));
+        RestAssured.when().get("/test/version").then().body(is("OK"));
     }
 
     @Test

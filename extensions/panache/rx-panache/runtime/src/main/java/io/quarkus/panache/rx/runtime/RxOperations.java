@@ -48,7 +48,11 @@ public class RxOperations {
                     return persist(pool, entity, modelInfo, t, modelInfo.getId(entity));
                 }
             } else {
-                return preparedQuery(pool, modelInfo.updateStatement(), t);
+                return preparedQuery(pool, modelInfo.updateStatement(), t).thenApply(rowset -> {
+                    if(rowset.rowCount() != 1)
+                        throw new StaleStateException("Entity was updated or deleted concurrently: "+modelInfo.getEntityClass()+" of id "+modelInfo.getId(entity));
+                    return rowset;
+                });
             }
         });
         return attachStackTrace(saveOrUpdate.thenCompose(v -> modelInfo.afterSave(entity)).thenApply(v -> entity));

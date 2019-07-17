@@ -1,5 +1,6 @@
 package io.quarkus.panache.rx.deployment;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -70,54 +71,20 @@ public class PanacheRxModelInfoGenerator {
         getEntityClass.returnValue(getEntityClass.loadClass(modelClassName));
 
         RxEntityField idField = entityModel.getIdField();
+        RxEntityField versionField = entityModel.getVersionField();
         createFromRow(modelClass, modelClassName, modelSignature, fields, idField);
 
         createIdMethods(modelClass, modelClassName, modelSignature, fields, idField);
 
-        // insertStatement
-        MethodCreator insertStatement = modelClass.getMethodCreator("insertStatement", String.class);
-        StringBuilder names = new StringBuilder();
-        StringBuilder indices = new StringBuilder();
-        StringBuilder updateFieldNoId = new StringBuilder();
-        int owningRelations = 0;
-        int fieldCount = 0;
-        for (int i = 0; i < fields.size(); i++) {
-            RxEntityField field = fields.get(i);
-            // skip collections and non-owning relations
-            if (field.isNonOwningRelation() || field.isManyToMany())
-                continue;
-            if (names.length() != 0) {
-                names.append(", ");
-                indices.append(", ");
-            }
-            if (updateFieldNoId.length() != 0) {
-                updateFieldNoId.append(", ");
-            }
-            if (field.isOwningRelation())
-                owningRelations++;
-            names.append(field.columnName());
-            // count this field, unlike relations or ignored fields
-            fieldCount++;
-            indices.append("$" + fieldCount);
-            // FIXME: cannot update field id with this logic
-            if (!field.isId) {
-                updateFieldNoId.append(field.columnName() + " = $" + fieldCount);
-            }
-        }
-        insertStatement
-                .returnValue(insertStatement.load("INSERT INTO " + tableName + " (" + names + ") VALUES (" + indices + ")"));
-
-        // updateStatement
-        MethodCreator updateStatement = modelClass.getMethodCreator("updateStatement", String.class);
-        updateStatement.returnValue(
-                updateStatement.load("UPDATE " + tableName + " SET " + updateFieldNoId + " WHERE " + idField.name + " = $1"));
-
+        // insert/updateStatement
+        int owningRelations = createStatements(modelClass, tableName, fields, idField, versionField);
+        
         // getTableName
         MethodCreator getTableName = modelClass.getMethodCreator("getTableName", String.class);
         getTableName.returnValue(getTableName.load(tableName));
 
         // toTuple
-        createToTuple(modelClass, modelClassName, fields, owningRelations, idField);
+        createToTuple(modelClass, modelClassName, fields, owningRelations, idField, versionField);
 
         // afterSave
         createAfterSave(modelClass, modelClassName, fields, idField);
@@ -144,6 +111,57 @@ public class PanacheRxModelInfoGenerator {
                 PanacheRxEntityBase.class);
 
         modelClass.close();
+    }
+
+    private static int createStatements(ClassCreator modelClass, String tableName, List<RxEntityField> fields, 
+                                        RxEntityField idField, RxEntityField versionField) {
+        MethodCreator insertStatement = modelClass.getMethodCreator("insertStatement", String.class);
+        StringBuilder names = new StringBuilder();
+        StringBuilder indices = new StringBuilder();
+        StringBuilder updateFieldNoId = new StringBuilder();
+        int owningRelations = 0;
+        // for both insert/update the ID is the first field
+        int insertFieldCount = 0;
+        int updateFieldCount = 0;
+        if(versionField != null) {
+            // if we have a version field, for update statements we add the previous value as the second tuple entry
+            updateFieldCount = 1;
+        }
+        for (int i = 0; i < fields.size(); i++) {
+            RxEntityField field = fields.get(i);
+            // skip collections and non-owning relations
+            if (field.isNonOwningRelation() || field.isManyToMany())
+                continue;
+            if (names.length() != 0) {
+                names.append(", ");
+                indices.append(", ");
+            }
+            if (updateFieldNoId.length() != 0) {
+                updateFieldNoId.append(", ");
+            }
+            if (field.isOwningRelation())
+                owningRelations++;
+            names.append(field.columnName());
+            // count this field, unlike relations or ignored fields
+            insertFieldCount++;
+            updateFieldCount++;
+            indices.append("$" + insertFieldCount);
+            // FIXME: cannot update field id with this logic
+            if (!field.isId) {
+                updateFieldNoId.append(field.columnName() + " = $" + updateFieldCount);
+            }
+        }
+        insertStatement
+                .returnValue(insertStatement.load("INSERT INTO " + tableName + " (" + names + ") VALUES (" + indices + ")"));
+
+        // updateStatement
+        MethodCreator updateStatement = modelClass.getMethodCreator("updateStatement", String.class);
+        String updateSql = "UPDATE " + tableName + " SET " + updateFieldNoId + " WHERE " + idField.columnName() + " = $1";
+        if(versionField != null)
+            updateSql += " AND " + versionField.columnName() + " = $2";
+        updateStatement.returnValue(updateStatement.load(updateSql));
+        
+        return owningRelations;
     }
 
     enum BridgeType {
@@ -481,90 +499,177 @@ public class PanacheRxModelInfoGenerator {
     }
 
     private static void createToTuple(ClassCreator modelClass, String modelClassName, List<RxEntityField> fields,
-            int owningRelations, RxEntityField idField) {
-        MethodCreator toTuple = modelClass.getMethodCreator("toTuple", CompletionStage.class, modelClassName);
-        ResultHandle entityParam = toTuple.getMethodParam(0);
+            int owningRelations, RxEntityField idField, RxEntityField versionField) {
+        try(MethodCreator toTuple = modelClass.getMethodCreator("toTuple", CompletionStage.class, modelClassName)){
+            ResultHandle entityParam = toTuple.getMethodParam(0);
 
-        BytecodeCreator creator = toTuple;
-        FunctionCreator myFunction = null;
-        if (owningRelations > 0) {
-            myFunction = toTuple.createFunction(Function.class);
-            creator = myFunction.getBytecode();
-        }
-        ResultHandle myTuple = creator.invokeStaticMethod(MethodDescriptor.ofMethod(Tuple.class, "tuple", Tuple.class));
-
-        BranchResult branch = creator
-                .ifNonZero(creator.readInstanceField(
-                        FieldDescriptor.of(modelClassName, PanacheRxEntityEnhancer.RX_PERSISTENT_FIELD_NAME, "Z"),
-                        entityParam));
-        ResultHandle idFieldValue = branch.trueBranch().readInstanceField(
-                FieldDescriptor.of(modelClassName, idField.name, idField.descriptor),
-                entityParam);
-        branch.trueBranch().invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class),
-                myTuple, idFieldValue);
-        branch.trueBranch().close();
-        branch.falseBranch().close();
-
-        for (int j = 0, entityField = 0; j < fields.size(); j++) {
-            RxEntityField field = fields.get(j);
-            // skip id, collections and non-owning 1-1
-            if (field.isNonOwningRelation() || field.isManyToMany() || field.isId)
-                continue;
-            ResultHandle fieldValue;
-            if (field.isOwningRelation()) {
-                // we get the value from the function parameter
-                // fieldValue = (($relationEntityClassName)((Object[])param)[{entityField++}]).id;
-                String relationEntityClassName = field.entityClass.name().toString();
-                RxEntityField relationEntityIdField = field.getInverseEntity().getIdField();
-                fieldValue = creator.readInstanceField(FieldDescriptor.of(relationEntityClassName, relationEntityIdField.name,
-                        relationEntityIdField.descriptor),
-                        creator.checkCast(
-                                creator.readArrayValue(creator.checkCast(creator.getMethodParam(0), Object[].class),
-                                        entityField++),
-                                relationEntityClassName));
-            } else {
-                // fieldValue = entityParam.${field.name}
-                fieldValue = creator.readInstanceField(FieldDescriptor.of(modelClassName, field.name, field.descriptor),
-                        entityParam);
+            BytecodeCreator creator = toTuple;
+            FunctionCreator myFunction = null;
+            if (owningRelations > 0) {
+                myFunction = toTuple.createFunction(Function.class);
+                creator = myFunction.getBytecode();
             }
-            String toTupleStoreMethod = field.getToTupleStoreMethod();
-            if (toTupleStoreMethod != null)
-                fieldValue = creator.invokeStaticMethod(
-                        MethodDescriptor.ofMethod(RxDataTypes.class, toTupleStoreMethod, Object.class,
-                                field.getToTupleStoreType()),
-                        fieldValue);
-            creator.invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class), myTuple,
-                    fieldValue);
-        }
+            // Tuple myTuple = Tuple.tuple();
+            ResultHandle myTuple = creator.invokeStaticMethod(MethodDescriptor.ofMethod(Tuple.class, "tuple", Tuple.class));
 
-        if (owningRelations > 0) {
-            // f = () -> ... myTuple
-            creator.returnValue(myTuple);
+            {
+                /*
+                 * if(entity.__persistent){
+                 *   myTuple.addValue(entity.{idField});
+                 *   // extra tuple param for old version value if required
+                 *   myTuple.addValue(entity.{versionField});
+                 * }
+                 */
+                BranchResult branch = creator
+                        .ifNonZero(creator.readInstanceField(
+                                                             FieldDescriptor.of(modelClassName, PanacheRxEntityEnhancer.RX_PERSISTENT_FIELD_NAME, "Z"),
+                                                             entityParam));
+                try(BytecodeCreator persistentBranch = branch.trueBranch()){
+                    ResultHandle idFieldValue = persistentBranch.readInstanceField(FieldDescriptor.of(modelClassName, idField.name, idField.descriptor),
+                                                                                   entityParam);
+                    persistentBranch.invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class),
+                                                         myTuple, idFieldValue);
+                    if(versionField != null) {
+                        ResultHandle versionFieldValue = persistentBranch.readInstanceField(FieldDescriptor.of(modelClassName, versionField.name, versionField.descriptor),
+                                                                                            entityParam);
+                        persistentBranch.invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class),
+                                                             myTuple, versionFieldValue);
+                    }
+                }
+                branch.falseBranch().close();
+            }
 
-            // CompletionStage[] myArgs = new CompletionStage[$manyToOnes]
-            AssignableResultHandle myArgs = toTuple.createVariable(CompletionStage[].class);
-            toTuple.assign(myArgs, toTuple.newArray(CompletionStage[].class, toTuple.load(owningRelations)));
-            int i = 0;
-            for (RxEntityField field : fields) {
-                if (!field.isOwningRelation() || field.isManyToMany())
+            for (int j = 0, entityField = 0; j < fields.size(); j++) {
+                RxEntityField field = fields.get(j);
+                // skip id, collections and non-owning 1-1
+                if (field.isNonOwningRelation() || field.isManyToMany() || field.isId)
                     continue;
-                // myArgs[$i++] = entityParam.${field.name};
-                toTuple.writeArrayValue(myArgs, i++,
-                        toTuple.readInstanceField(FieldDescriptor.of(modelClassName, field.name, field.descriptor),
-                                entityParam));
+                FieldDescriptor fieldDescriptor = FieldDescriptor.of(modelClassName, field.name, field.descriptor);
+                ResultHandle fieldValue;
+                if (field.isOwningRelation()) {
+                    // we get the value from the function parameter
+                    // fieldValue = (($relationEntityClassName)((Object[])param)[{entityField++}]).id;
+                    String relationEntityClassName = field.entityClass.name().toString();
+                    RxEntityField relationEntityIdField = field.getInverseEntity().getIdField();
+                    fieldValue = creator.readInstanceField(FieldDescriptor.of(relationEntityClassName, relationEntityIdField.name,
+                                                                              relationEntityIdField.descriptor),
+                                                           creator.checkCast(
+                                                                             creator.readArrayValue(creator.checkCast(creator.getMethodParam(0), Object[].class),
+                                                                                                    entityField++),
+                                                                             relationEntityClassName));
+                } else {
+                    if(field.isVersion) {
+                        /*
+                         * if(entity.__persistent){
+                         *   entity.{idField} = Math.addExact(1, entity.{idField});
+                         * }else{
+                         *   entity.{idField} = 0;
+                         * }
+                         */
+                        BranchResult versionBranch = creator
+                                .ifNonZero(creator.readInstanceField(
+                                                                     FieldDescriptor.of(modelClassName, PanacheRxEntityEnhancer.RX_PERSISTENT_FIELD_NAME, "Z"),
+                                                                     toTuple.getMethodParam(0)));
+                        Class<?> unboxedType = null;
+                        switch(field.descriptor) {
+                        case "S":
+                        case "Ljava/lang/Short;":
+                        case "I":
+                        case "Ljava/lang/Integer;":
+                            unboxedType = int.class;
+                            break;
+                        case "J":
+                        case "Ljava/lang/Long;":
+                            unboxedType = long.class;
+                            break;
+                        case "Ljava/sql/Timestamp;":
+                            unboxedType = Timestamp.class;
+                            break;
+                        default:
+                            throw new IllegalStateException("Unsupported version type: "+field.descriptor+" in field "+field.name);    
+                        }
+                        if(unboxedType != Timestamp.class) {
+                            try(BytecodeCreator persistentBranch = versionBranch.trueBranch()){
+                                ResultHandle previousValue = persistentBranch.readInstanceField(fieldDescriptor, entityParam);
+                                ResultHandle addOne = persistentBranch.invokeStaticMethod(MethodDescriptor.ofMethod(Math.class, "addExact", unboxedType, unboxedType, unboxedType), 
+                                                                                          unboxedType == long.class ? persistentBranch.load(1l) : persistentBranch.load(1),
+                                                                                                  previousValue);
+                                addOne = box(persistentBranch, addOne, field.descriptor, unboxedType);
+                                persistentBranch.writeInstanceField(fieldDescriptor, entityParam, addOne);
+                            }
+
+                            try(BytecodeCreator newBranch = versionBranch.falseBranch()){
+                                ResultHandle initVal = unboxedType == long.class ? creator.load(0l) : creator.load(0);
+                                initVal = box(newBranch, initVal, field.descriptor, unboxedType);
+                                newBranch.writeInstanceField(fieldDescriptor, entityParam, initVal);
+                            }
+                        } else {
+                            ResultHandle now = creator.invokeStaticMethod(MethodDescriptor.ofMethod(System.class, "currentTimeMillis", long.class));
+                            creator.writeInstanceField(fieldDescriptor, entityParam, creator.newInstance(MethodDescriptor.ofConstructor(Timestamp.class, long.class), 
+                                                                                                         now));
+                        }
+                    }
+                    // fieldValue = entityParam.${field.name}
+                    fieldValue = creator.readInstanceField(fieldDescriptor, entityParam);
+                }
+                String toTupleStoreMethod = field.getToTupleStoreMethod();
+                if (toTupleStoreMethod != null) {
+                    // fieldValue = RxDataTypes.{toTupleStoreMethod}(fieldValue);
+                    fieldValue = creator.invokeStaticMethod(
+                                                            MethodDescriptor.ofMethod(RxDataTypes.class, toTupleStoreMethod, Object.class,
+                                                                                      field.getToTupleStoreType()),
+                                                            fieldValue);
+                }
+                // myTuple.addValue(fieldValue)
+                creator.invokeVirtualMethod(MethodDescriptor.ofMethod(Tuple.class, "addValue", Tuple.class, Object.class), myTuple,
+                                            fieldValue);
             }
-            // return RxOperations.zipArray(f, myArgs)
-            toTuple.returnValue(toTuple.invokeStaticMethod(
-                    MethodDescriptor.ofMethod(RxOperations.class, "zipArray", CompletionStage.class, Function.class,
-                            CompletionStage[].class),
-                    myFunction.getInstance(), myArgs));
-        } else {
-            // return RxOperations.completedFuture(myTuple)
-            creator.returnValue(
-                    creator.invokeStaticMethod(
-                            MethodDescriptor.ofMethod(RxOperations.class, "completedFuture", CompletableFuture.class,
-                                    Object.class),
-                            myTuple));
+
+            if (owningRelations > 0) {
+                // f = () -> ... myTuple
+                creator.returnValue(myTuple);
+                creator.close();
+
+                // CompletionStage[] myArgs = new CompletionStage[$manyToOnes]
+                AssignableResultHandle myArgs = toTuple.createVariable(CompletionStage[].class);
+                toTuple.assign(myArgs, toTuple.newArray(CompletionStage[].class, toTuple.load(owningRelations)));
+                int i = 0;
+                for (RxEntityField field : fields) {
+                    if (!field.isOwningRelation() || field.isManyToMany())
+                        continue;
+                    // myArgs[$i++] = entityParam.${field.name};
+                    toTuple.writeArrayValue(myArgs, i++,
+                                            toTuple.readInstanceField(FieldDescriptor.of(modelClassName, field.name, field.descriptor),
+                                                                      entityParam));
+                }
+                // return RxOperations.zipArray(f, myArgs)
+                toTuple.returnValue(toTuple.invokeStaticMethod(
+                                                               MethodDescriptor.ofMethod(RxOperations.class, "zipArray", CompletionStage.class, Function.class,
+                                                                                         CompletionStage[].class),
+                                                               myFunction.getInstance(), myArgs));
+            } else {
+                // return RxOperations.completedFuture(myTuple)
+                creator.returnValue(
+                                    creator.invokeStaticMethod(
+                                                               MethodDescriptor.ofMethod(RxOperations.class, "completedFuture", CompletableFuture.class,
+                                                                                         Object.class),
+                                                               myTuple));
+                creator.returnValue(creator.loadNull());
+            }
         }
+    }
+
+    private static ResultHandle box(BytecodeCreator creator, ResultHandle result, String toDescriptor, Class<?> fromType) {
+        if(fromType == int.class) {
+            if(toDescriptor.equals("Ljava/lang/Integer;"))
+                return creator.newInstance(MethodDescriptor.ofConstructor(Integer.class, int.class), result);
+            if(toDescriptor.equals("Ljava/lang/Short;"))
+                return creator.newInstance(MethodDescriptor.ofConstructor(Short.class, short.class), result);
+        }
+        if(fromType == long.class) {
+            if(toDescriptor.equals("Ljava/lang/Long;"))
+                return creator.newInstance(MethodDescriptor.ofConstructor(Long.class, long.class), result);
+        }
+        return result;
     }
 }

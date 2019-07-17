@@ -18,6 +18,7 @@ package io.quarkus.example.panache;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -1382,6 +1383,202 @@ public class TestEndpoint {
                 .thenApply(count -> {
                     Assertions.assertEquals(0, count);
                     return "OK";
+                });
+    }
+
+    @GET
+    @Path("version")
+    public CompletionStage<String> testRxVersion() {
+        return testIntVersion()
+                .thenCompose(v -> testBoxedIntVersion())
+                .thenCompose(v -> testShortVersion())
+                .thenCompose(v -> testBoxedShortVersion())
+                .thenCompose(v -> testLongVersion())
+                .thenCompose(v -> testBoxedLongVersion())
+                .thenCompose(v -> testTimestampVersion())
+                .thenApply(v -> "OK");
+    }
+
+    private CompletionStage<Void> testTimestampVersion() {
+        RxTimestampVersionedEntity timestampVersionedEntity = new RxTimestampVersionedEntity();
+
+        return timestampVersionedEntity.save() // persist
+                .thenCompose(e -> {
+                    Assertions.assertNotNull(timestampVersionedEntity.version);
+                    Timestamp originalTimestamp = timestampVersionedEntity.version;
+                    // load
+                    return RxTimestampVersionedEntity.<RxTimestampVersionedEntity> findById(e.id)
+                            .thenCompose(loadedEntity -> {
+                                Assertions.assertEquals(originalTimestamp, timestampVersionedEntity.version);
+                                // update 1
+                                return loadedEntity.save();
+                            })
+                            .thenCompose(loadedEntity -> {
+                                Assertions.assertNotEquals(originalTimestamp, loadedEntity.version);
+                                Assertions.assertEquals(originalTimestamp, timestampVersionedEntity.version);
+                                // update 2
+                                return timestampVersionedEntity.save();
+                            })
+                            .handle((v, t) -> {
+                                Assertions.assertNotNull(t);
+                                return null;
+                            });
+                });
+    }
+
+    private CompletionStage<Void> testShortVersion() {
+        RxShortVersionedEntity shortVersionedEntity = new RxShortVersionedEntity();
+
+        return shortVersionedEntity.save() // persist
+                .thenCompose(e -> {
+                    Assertions.assertEquals(0, shortVersionedEntity.version);
+                    // load
+                    return RxShortVersionedEntity.<RxShortVersionedEntity> findById(e.id);
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(0, loadedEntity.version);
+                    // update 1
+                    return loadedEntity.save();
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(1, loadedEntity.version);
+                    Assertions.assertEquals(0, shortVersionedEntity.version);
+                    // update 2
+                    return shortVersionedEntity.save();
+                })
+                .handle((v, t) -> {
+                    Assertions.assertNotNull(t);
+                    return null;
+                });
+    }
+
+    private CompletionStage<Void> testBoxedShortVersion() {
+        RxBoxedShortVersionedEntity shortVersionedEntity = new RxBoxedShortVersionedEntity();
+
+        return shortVersionedEntity.save() // persist
+                .thenCompose(e -> {
+                    Assertions.assertEquals((short) 0, shortVersionedEntity.version);
+                    // load
+                    return RxBoxedShortVersionedEntity.<RxBoxedShortVersionedEntity> findById(e.id);
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals((short) 0, loadedEntity.version);
+                    // update 1
+                    return loadedEntity.save();
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals((short) 1, loadedEntity.version);
+                    Assertions.assertEquals((short) 0, shortVersionedEntity.version);
+                    // update 2
+                    return shortVersionedEntity.save();
+                })
+                .handle((v, t) -> {
+                    Assertions.assertNotNull(t);
+                    return null;
+                });
+    }
+
+    private CompletionStage<Void> testIntVersion() {
+        RxIntVersionedEntity intVersionedEntity = new RxIntVersionedEntity();
+
+        return intVersionedEntity.save() // persist
+                .thenCompose(e -> {
+                    Assertions.assertEquals(0, intVersionedEntity.version);
+                    // load
+                    return RxIntVersionedEntity.<RxIntVersionedEntity> findById(e.id);
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(0, loadedEntity.version);
+                    // update 1
+                    return loadedEntity.save();
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(1, loadedEntity.version);
+                    Assertions.assertEquals(0, intVersionedEntity.version);
+                    // update 2
+                    return intVersionedEntity.save();
+                })
+                .handle((v, t) -> {
+                    Assertions.assertNotNull(t);
+                    return null;
+                });
+    }
+
+    private CompletionStage<Void> testBoxedIntVersion() {
+        RxBoxedIntVersionedEntity intVersionedEntity = new RxBoxedIntVersionedEntity();
+
+        return intVersionedEntity.save() // persist
+                .thenCompose(e -> {
+                    Assertions.assertEquals(0, intVersionedEntity.version);
+                    // load
+                    return RxBoxedIntVersionedEntity.<RxBoxedIntVersionedEntity> findById(e.id);
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(0, loadedEntity.version);
+                    // update 1
+                    return loadedEntity.save();
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(1, loadedEntity.version);
+                    Assertions.assertEquals(0, intVersionedEntity.version);
+                    // update 2
+                    return intVersionedEntity.save();
+                })
+                .handle((v, t) -> {
+                    Assertions.assertNotNull(t);
+                    return null;
+                });
+    }
+
+    private CompletionStage<Void> testLongVersion() {
+        RxLongVersionedEntity longVersionedEntity = new RxLongVersionedEntity();
+
+        return longVersionedEntity.save() // persist
+                .thenCompose(e -> {
+                    Assertions.assertEquals(0, longVersionedEntity.version);
+                    // load
+                    return RxLongVersionedEntity.<RxLongVersionedEntity> findById(e.id);
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(0, loadedEntity.version);
+                    // update 1
+                    return loadedEntity.save();
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(1, loadedEntity.version);
+                    Assertions.assertEquals(0, longVersionedEntity.version);
+                    // update 2
+                    return longVersionedEntity.save();
+                })
+                .handle((v, t) -> {
+                    Assertions.assertNotNull(t);
+                    return null;
+                });
+    }
+
+    private CompletionStage<Void> testBoxedLongVersion() {
+        RxBoxedLongVersionedEntity longVersionedEntity = new RxBoxedLongVersionedEntity();
+
+        return longVersionedEntity.save() // persist
+                .thenCompose(e -> {
+                    Assertions.assertEquals(0, longVersionedEntity.version);
+                    // load
+                    return RxBoxedLongVersionedEntity.<RxBoxedLongVersionedEntity> findById(e.id);
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(0, loadedEntity.version);
+                    // update 1
+                    return loadedEntity.save();
+                })
+                .thenCompose(loadedEntity -> {
+                    Assertions.assertEquals(1, loadedEntity.version);
+                    Assertions.assertEquals(0, longVersionedEntity.version);
+                    // update 2
+                    return longVersionedEntity.save();
+                })
+                .handle((v, t) -> {
+                    Assertions.assertNotNull(t);
+                    return null;
                 });
     }
 }

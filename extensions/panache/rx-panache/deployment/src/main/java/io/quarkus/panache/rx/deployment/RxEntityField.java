@@ -28,6 +28,7 @@ public class RxEntityField extends EntityField {
     boolean isGenerated;
     private String generator;
     boolean isId;
+    boolean isVersion;
     RxEntityModel entityModel;
 
     public RxEntityField(RxEntityModel entityModel, FieldInfo fieldInfo, IndexView index) {
@@ -99,6 +100,8 @@ public class RxEntityField extends EntityField {
         }
         AnnotationInstance id = fieldInfo.annotation(JpaNames.DOTNAME_ID);
         this.isId = id != null;
+        AnnotationInstance version = fieldInfo.annotation(JpaNames.DOTNAME_VERSION);
+        this.isVersion = version != null;
     }
 
     public String getFromRowMethod() {
