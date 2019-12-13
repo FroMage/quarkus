@@ -9,12 +9,14 @@ import java.util.function.Function;
 
 import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.PrimitiveType.Primitive;
 import org.jboss.jandex.Type;
+import org.jboss.jandex.Type.Kind;
 import org.jboss.jandex.TypeVariable;
 import org.jboss.jandex.WildcardType;
 import org.objectweb.asm.Opcodes;
@@ -195,13 +197,13 @@ public class JandexUtil {
 
         // look at the interfaces for a direct implementation
         for (org.jboss.jandex.Type type : classByName.interfaceTypes()) {
-            if (type.name().equals(soughtSuperType)) {
-                // found the type args
-                return substitute(type.asParameterizedType().arguments(), typeArgs);
-            }
-            // look at super-interfaces
             // FIXME: add cache to avoid visiting the same interface more than once
             List<org.jboss.jandex.Type> superArgs = findSuperArgs(type, typeArgs);
+            if (type.name().equals(soughtSuperType)) {
+                // found the type args
+                return boundsIfRaw(type, superArgs, index);
+            }
+            // look at super-interfaces
             List<org.jboss.jandex.Type> ret = findArgumentsToSuperType(type.name(), superArgs, soughtSuperType, index);
             if(ret != null)
                 return ret;
@@ -209,8 +211,33 @@ public class JandexUtil {
         // look at super-type
         List<org.jboss.jandex.Type> superArgs = findSuperArgs(classByName.superClassType(), typeArgs);
         if(classByName.superName().equals(soughtSuperType))
-            return superArgs;
+            return boundsIfRaw(classByName.superClassType(), superArgs, index);
         return findArgumentsToSuperType(classByName.superName(), superArgs, soughtSuperType, index);
+    }
+
+    private static List<Type> boundsIfRaw(Type superClassType, List<Type> superArgs, IndexView index) {
+        // if we have any arg we're not raw
+        if(!superArgs.isEmpty())
+            return superArgs;
+        // we have no args: are we raw?
+        final ClassInfo classByName = index.getClassByName(superClassType.name());
+        // class not indexed: too bad
+        if(classByName == null)
+            return null;
+        List<TypeVariable> typeParameters = classByName.typeParameters();
+        // no generics means an empty super args is accurate
+        if(typeParameters.isEmpty())
+            return superArgs;
+        // look at bounds
+        superArgs = new ArrayList<>(typeParameters.size());
+        for (TypeVariable typeVariable : typeParameters) {
+            List<Type> bounds = typeVariable.bounds();
+            if(bounds.isEmpty())
+                superArgs.add(ClassType.create(DOTNAME_OBJECT, Kind.CLASS));
+            else
+                superArgs.add(bounds.get(0));
+        }
+        return superArgs;
     }
 
     private static List<org.jboss.jandex.Type> findSuperArgs(org.jboss.jandex.Type superClassType,
