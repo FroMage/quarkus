@@ -1,22 +1,29 @@
 package io.quarkus.panache.common.deployment;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
+import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
+import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.Type.Kind;
+import org.jboss.jandex.TypeVariable;
+import org.jboss.jandex.WildcardType;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 public abstract class PanacheRepositoryEnhancer implements BiFunction<String, ClassVisitor, ClassVisitor> {
-    private static final DotName OBJECT_DOT_NAME = DotName.createSimple(Object.class.getName());
 
     protected final ClassInfo panacheRepositoryBaseClassInfo;
     protected final IndexView indexView;
@@ -76,29 +83,19 @@ public abstract class PanacheRepositoryEnhancer implements BiFunction<String, Cl
         }
 
         private String findEntityBinaryTypeForPanacheRepository(String repositoryClassName, DotName repositoryDotName) {
+            System.err.println("findEntityBinaryTypeForPanacheRepository " + repositoryClassName + " for " + repositoryDotName);
             for (ClassInfo classInfo : indexView.getAllKnownImplementors(repositoryDotName)) {
+                System.err.println(" found class: " + classInfo);
                 if (repositoryClassName.equals(classInfo.name().toString())) {
-                    return recursivelyFindEntityTypeFromClass(classInfo.name(), repositoryDotName);
+                    List<org.jboss.jandex.Type> args = JandexUtil.findArgumentsToSuperType(classInfo.name(), Collections.emptyList(), repositoryDotName, indexView);
+                    if(args != null) {
+                        org.jboss.jandex.Type entityType = args.get(0);
+                        return entityType.name().toString().replace('.', '/');
+                    }
                 }
             }
 
             return null;
-        }
-
-        private String recursivelyFindEntityTypeFromClass(DotName clazz, DotName repositoryDotName) {
-            if (clazz.equals(OBJECT_DOT_NAME)) {
-                return null;
-            }
-
-            final ClassInfo classByName = indexView.getClassByName(clazz);
-            for (org.jboss.jandex.Type type : classByName.interfaceTypes()) {
-                if (type.name().equals(repositoryDotName)) {
-                    org.jboss.jandex.Type entityType = type.asParameterizedType().arguments().get(0);
-                    return entityType.name().toString().replace('.', '/');
-                }
-            }
-
-            return recursivelyFindEntityTypeFromClass(classByName.superName(), repositoryDotName);
         }
 
         @Override
