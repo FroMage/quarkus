@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Priorities;
 
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -17,6 +18,7 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.ApplicationArchivesBuildItem;
 import io.quarkus.rest.server.runtime.ExceptionMapperRecorder;
 import io.quarkus.rest.server.runtime.NotFoundExceptionMapper;
+import io.quarkus.rest.server.runtime.util.ScoreSystemProducer;
 import io.quarkus.rest.spi.ExceptionMapperBuildItem;
 import io.quarkus.vertx.http.deployment.HttpRootPathBuildItem;
 import io.quarkus.vertx.http.deployment.devmode.NotFoundPageDisplayableEndpointBuildItem;
@@ -69,5 +71,13 @@ public class QuarkusRestDevModeProcessor {
                 .collect(Collectors.toList());
 
         recorder.setAdditionalEndpoints(endpoints);
+    }
+
+    @BuildStep(onlyIf = IsDevelopment.class)
+    void devConsole(
+            BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItemBuildProducer) {
+        additionalBeanBuildItemBuildProducer
+                .produce(AdditionalBeanBuildItem.builder().addBeanClasses(ScoreSystemProducer.class)
+                        .build());
     }
 }
