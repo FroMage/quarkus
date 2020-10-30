@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import javax.inject.Inject;
@@ -14,6 +16,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import org.yaml.snakeyaml.Yaml;
 
 import io.quarkus.qute.Engine;
 import io.quarkus.qute.Template;
@@ -28,16 +32,27 @@ public class DevConsole {
     @GET
     @Produces(MediaType.TEXT_HTML)
     public TemplateInstance hello() throws IOException {
-        Enumeration<URL> devTemplates = getClass().getClassLoader().getResources("/dev-templates/simple.html");
-        List<String> templates = new ArrayList<>();
-        while (devTemplates.hasMoreElements()) {
-            URL devTemplate = devTemplates.nextElement();
-            Template template = readTemplate(devTemplate);
-            String result = template.render();
-            templates.add(result);
-        }
         Template devTemplate = readTemplate("/dev-templates/index.html");
-        return devTemplate.data("simples", templates);
+        Enumeration<URL> extensionDescriptors = getClass().getClassLoader().getResources("/META-INF/quarkus-extension.yaml");
+        List<Map<String, Object>> extensions = new ArrayList<>();
+        Yaml yaml = new Yaml();
+        while (extensionDescriptors.hasMoreElements()) {
+            URL extensionDescriptor = extensionDescriptors.nextElement();
+            String desc = readURL(extensionDescriptor);
+            Map<String, Object> loaded = yaml.load(desc);
+            String artifactId = (String) loaded.get("artifact-id");
+            URL extensionSimple = getClass().getClassLoader().getResource("/dev-templates/" + artifactId + ".html");
+            if (extensionSimple != null) {
+                Template template = readTemplate(extensionSimple);
+                String result = template.render();
+                loaded.put("_dev", result);
+            }
+            extensions.add(loaded);
+        }
+        Collections.sort(extensions, (a, b) -> {
+            return ((String) a.get("name")).compareTo((String) b.get("name"));
+        });
+        return devTemplate.data("extensions", extensions);
     }
 
     @Path("{path:.+}")
@@ -57,11 +72,15 @@ public class DevConsole {
     }
 
     private Template readTemplate(URL url) throws IOException {
+        return engine.parse(readURL(url));
+    }
+
+    private String readURL(URL url) throws IOException {
         try (Scanner scanner = new Scanner(url.openStream(),
                 StandardCharsets.UTF_8.toString())) {
             scanner.useDelimiter("\\A");
             String templateBody = scanner.hasNext() ? scanner.next() : null;
-            return engine.parse(templateBody);
+            return templateBody;
         }
     }
 }
