@@ -217,6 +217,7 @@ public class SchedulerProcessor {
         }
 
         syntheticBeans.produce(SyntheticBeanBuildItem.configure(SchedulerContext.class).setRuntimeInit()
+                .name("schedulerContext")
                 .supplier(recorder.createContext(config, executor.getExecutorProxy(), scheduledMetadata))
                 .done());
 
