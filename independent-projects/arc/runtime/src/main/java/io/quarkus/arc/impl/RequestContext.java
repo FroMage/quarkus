@@ -4,6 +4,7 @@ import io.quarkus.arc.ContextInstanceHandle;
 import io.quarkus.arc.InjectableBean;
 import io.quarkus.arc.ManagedContext;
 import io.quarkus.arc.impl.EventImpl.Notifier;
+import io.smallrye.context.storage.spi.StorageManager;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -33,7 +34,8 @@ class RequestContext implements ManagedContext {
     private static final Logger LOGGER = Logger.getLogger(RequestContext.class.getPackage().getName());
 
     // It's a normal scope so there may be no more than one mapped instance per contextual type per thread
-    private final ThreadLocal<ConcurrentMap<Contextual<?>, ContextInstanceHandle<?>>> currentContext = new ThreadLocal<>();
+    private final ThreadLocal<ConcurrentMap<Contextual<?>, ContextInstanceHandle<?>>> currentContext = StorageManager
+            .threadLocal(RequestContextStorageDeclaration.class);
 
     private final LazyValue<Notifier<Object>> initializedNotifier;
     private final LazyValue<Notifier<Object>> beforeDestroyedNotifier;

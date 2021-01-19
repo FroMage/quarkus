@@ -4,7 +4,6 @@ import java.util.Map;
 
 import org.eclipse.microprofile.context.ThreadContext;
 import org.eclipse.microprofile.context.spi.ThreadContextController;
-import org.eclipse.microprofile.context.spi.ThreadContextProvider;
 import org.eclipse.microprofile.context.spi.ThreadContextSnapshot;
 
 import io.quarkus.arc.Arc;
@@ -12,12 +11,14 @@ import io.quarkus.arc.ArcContainer;
 import io.quarkus.arc.InjectableContext;
 import io.quarkus.arc.InjectableContext.ContextState;
 import io.quarkus.arc.ManagedContext;
+import io.quarkus.arc.impl.RequestContextStorageDeclaration;
+import io.smallrye.context.FastStorageThreadContextProvider;
 
 /**
  * Context propagation for Arc
  * Only handles Request context as that's currently the only one in Arc that needs propagation.
  */
-public class ArcContextProvider implements ThreadContextProvider {
+public class ArcContextProvider implements FastStorageThreadContextProvider<RequestContextStorageDeclaration> {
 
     protected static final ThreadContextController NOOP_CONTROLLER = new ThreadContextController() {
         @Override
@@ -178,5 +179,15 @@ public class ArcContextProvider implements ThreadContextProvider {
             requestContext.activate(stateToRestore);
         }
 
+    }
+
+    @Override
+    public Object clearedValue(Map<String, String> props) {
+        return null;
+    }
+
+    @Override
+    public Class<RequestContextStorageDeclaration> getStorageDeclaration() {
+        return RequestContextStorageDeclaration.class;
     }
 }

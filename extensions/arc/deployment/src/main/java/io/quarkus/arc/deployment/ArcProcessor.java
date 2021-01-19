@@ -78,6 +78,7 @@ import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
 import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.deployment.builditem.LiveReloadBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
+import io.quarkus.deployment.builditem.StorageReadyBuildItem;
 import io.quarkus.deployment.builditem.TestClassPredicateBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveFieldBuildItem;
@@ -432,6 +433,7 @@ public class ArcProcessor {
     @Record(STATIC_INIT)
     public BeanContainerBuildItem generateResources(ArcConfig config, ArcRecorder recorder, ShutdownContextBuildItem shutdown,
             ValidationPhaseBuildItem validationPhase,
+            StorageReadyBuildItem storageReady,
             List<ValidationPhaseBuildItem.ValidationErrorBuildItem> validationErrors,
             List<BeanContainerListenerBuildItem> beanContainerListenerBuildItems,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
