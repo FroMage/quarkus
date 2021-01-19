@@ -11,6 +11,12 @@ import io.quarkus.runtime.annotations.ConfigRoot;
 public class VertxConfiguration {
 
     /**
+     * EXPERIMENTAL
+     */
+    @ConfigItem(defaultValue = "true")
+    public boolean storage;
+
+    /**
      * Enables or disables the Vert.x cache.
      */
     @ConfigItem(defaultValue = "true")

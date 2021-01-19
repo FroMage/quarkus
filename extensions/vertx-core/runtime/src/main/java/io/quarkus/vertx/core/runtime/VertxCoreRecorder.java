@@ -176,6 +176,13 @@ public class VertxCoreRecorder {
 
         VertxOptions options = new VertxOptions();
 
+        if (conf.storage) {
+            System.err.println("Using fast storage");
+            options.setThreadFactoryCreator(new QuarkusThreadFactoryCreator());
+        } else {
+            System.err.println("Using TL storage");
+        }
+
         if (conf != null) {
             convertToVertxOptions(conf, options, true);
         }
