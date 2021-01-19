@@ -9,6 +9,7 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.ExecutorBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.mutiny.runtime.MutinyInfrastructure;
+import io.quarkus.smallrye.context.deployment.SmallRyeContextPropagationRuntimeInitialisedBuildItem;
 
 public class MutinyProcessor {
 
@@ -19,14 +20,9 @@ public class MutinyProcessor {
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    public void initExecutor(ExecutorBuildItem executorBuildItem, MutinyInfrastructure recorder) {
+    public void initExecutor(SmallRyeContextPropagationRuntimeInitialisedBuildItem cpInitialised,
+            ExecutorBuildItem executorBuildItem, MutinyInfrastructure recorder) {
         ExecutorService executor = executorBuildItem.getExecutorProxy();
         recorder.configureMutinyInfrastructure(executor);
-    }
-
-    @BuildStep
-    @Record(ExecutionTime.STATIC_INIT)
-    public void configureDroppedExceptionHandlerAndThreadBlockingChecker(MutinyInfrastructure recorder) {
-        recorder.configureDroppedExceptionHandlerAndThreadBlockingChecker();
     }
 }

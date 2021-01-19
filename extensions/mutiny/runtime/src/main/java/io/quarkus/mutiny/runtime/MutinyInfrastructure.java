@@ -15,11 +15,8 @@ public class MutinyInfrastructure {
     public static final String VERTX_EVENT_LOOP_THREAD_PREFIX = "vert.x-eventloop-thread-";
 
     public void configureMutinyInfrastructure(ExecutorService exec) {
-        Infrastructure.setDefaultExecutor(exec);
-    }
-
-    public void configureDroppedExceptionHandlerAndThreadBlockingChecker() {
         Logger logger = Logger.getLogger(MutinyInfrastructure.class);
+        Infrastructure.setDefaultExecutor(exec);
         Infrastructure.setDroppedExceptionHandler(new Consumer<Throwable>() {
             @Override
             public void accept(Throwable throwable) {
