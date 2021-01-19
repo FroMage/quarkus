@@ -70,6 +70,7 @@ class SmallRyeContextPropagationProcessor {
             ExecutorBuildItem executorBuildItem,
             BuildProducer<FeatureBuildItem> feature,
             BuildProducer<ManagedExecutorInitializedBuildItem> managedExecutorInitialized,
+            BuildProducer<SmallRyeContextPropagationRuntimeInitialisedBuildItem> marker,
             BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
         feature.produce(new FeatureBuildItem(Feature.SMALLRYE_CONTEXT_PROPAGATION));
 
@@ -87,5 +88,6 @@ class SmallRyeContextPropagationProcessor {
 
         // This should be removed at some point after Quarkus 1.7
         managedExecutorInitialized.produce(new ManagedExecutorInitializedBuildItem());
+        marker.produce(new SmallRyeContextPropagationRuntimeInitialisedBuildItem());
     }
 }

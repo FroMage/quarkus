@@ -42,13 +42,12 @@ public class SmallRyeContextPropagationRecorder {
 
     public void configureRuntime(ExecutorService executorService) {
         // associate the static init manager to the runtime CL
-        ContextManagerProvider contextManagerProvider = ContextManagerProvider.instance();
         // finish building our manager
         builder.withDefaultExecutorService(executorService);
+        builder.forClassLoader(Thread.currentThread().getContextClassLoader());
+        builder.registerOnProvider();
 
-        SmallRyeContextManager contextManager = builder.build();
-
-        contextManagerProvider.registerContextManager(contextManager, Thread.currentThread().getContextClassLoader());
+        builder.build();
     }
 
     public Supplier<Object> initializeManagedExecutor(ExecutorService executorService) {
