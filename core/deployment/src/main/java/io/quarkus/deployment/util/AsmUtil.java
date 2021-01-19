@@ -163,7 +163,7 @@ public class AsmUtil {
      * your {@code typeArgMapper} contains {@code T=Ljava/lang/Integer;}.
      * 
      * @param type the type you want the signature for.
-     * @param typeArgMapper a mapping between type argument names and their bytecode descriptor.
+     * @param typeArgMapper a mapping between type argument names and their bytecode signature.
      * @return a bytecode signature for that type.
      */
     public static String getSignature(Type type, Function<String, String> typeArgMapper) {
