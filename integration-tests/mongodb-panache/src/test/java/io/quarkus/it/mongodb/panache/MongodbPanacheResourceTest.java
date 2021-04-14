@@ -21,6 +21,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import io.quarkus.it.mongodb.panache.book.BookDetail;
+import io.quarkus.it.mongodb.panache.bugs.Bug16399Entity;
 import io.quarkus.it.mongodb.panache.person.Person;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -388,5 +389,12 @@ class MongodbPanacheResourceTest {
     @Test
     public void testBug13301() {
         get("/bugs/13301").then().statusCode(200);
+    }
+
+    @Test
+    public void testBug16399() {
+        Bug16399Entity entity = new Bug16399Entity();
+        entity.persist();
+        Bug16399Entity.dbFindById(Arrays.asList(entity.id));
     }
 }
