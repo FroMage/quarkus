@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -35,8 +36,11 @@ import io.quarkus.vertx.http.runtime.security.ChallengeData;
 import io.smallrye.jwt.build.Jwt;
 import io.smallrye.jwt.util.KeyUtils;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.subscription.UniEmitter;
+import io.vertx.core.Handler;
 import io.vertx.core.http.Cookie;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.impl.CookieImpl;
 import io.vertx.core.http.impl.ServerCookie;
 import io.vertx.core.json.JsonObject;
@@ -78,9 +82,43 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
 
         final String code = context.request().getParam("code");
         if (code == null) {
+            String contentType = context.request().getHeader("Content-Type");
+            if (context.request().method() == HttpMethod.POST
+                    && contentType != null
+                    && (contentType.equals("application/x-www-form-urlencoded")
+                            || contentType.startsWith("application/x-www-form-urlencoded;"))) {
+                context.request().setExpectMultipart(true);
+                return Uni.createFrom().emitter(new Consumer<UniEmitter<? super String>>() {
+                    @Override
+                    public void accept(UniEmitter<? super String> t) {
+                        context.request().endHandler(new Handler<Void>() {
+                            @Override
+                            public void handle(Void event) {
+                                String code = context.request().getFormAttribute("code");
+                                t.complete(code);
+                            }
+                        });
+                        context.request().resume();
+                    }
+                }).onItem().transformToUni(new Function<String, Uni<? extends SecurityIdentity>>() {
+                    @Override
+                    public Uni<? extends SecurityIdentity> apply(String code) {
+                        if (code == null)
+                            return Uni.createFrom().optional(Optional.empty());
+                        // start a new session by starting the code flow dance
+                        Uni<TenantConfigContext> resolvedContext = resolver.resolveContext(context);
+                        return resolvedContext.onItem()
+                                .transformToUni(new Function<TenantConfigContext, Uni<? extends SecurityIdentity>>() {
+                                    @Override
+                                    public Uni<SecurityIdentity> apply(TenantConfigContext tenantContext) {
+                                        return performCodeFlow(identityProviderManager, context, tenantContext, code);
+                                    }
+                                });
+                    }
+                });
+            }
             return Uni.createFrom().optional(Optional.empty());
         }
-
         // start a new session by starting the code flow dance
         Uni<TenantConfigContext> resolvedContext = resolver.resolveContext(context);
         return resolvedContext.onItem()
@@ -90,7 +128,6 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
                         return performCodeFlow(identityProviderManager, context, tenantContext, code);
                     }
                 });
-
     }
 
     private Uni<SecurityIdentity> reAuthenticate(Cookie sessionCookie,
@@ -259,6 +296,9 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
         String userQuery = null;
         if (stateCookie != null) {
             List<String> values = context.queryParam("state");
+            if (values.size() == 0) {
+                values = context.request().formAttributes().getAll("state");
+            }
             // IDP must return a 'state' query parameter and the value of the state cookie must start with this parameter's value
             if (values.size() != 1) {
                 LOG.debug("State parameter can not be empty or multi-valued");
