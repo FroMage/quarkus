@@ -80,6 +80,13 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
                     });
         }
 
+        // handle returning to our redirect URI
+        String path = context.request().path();
+        String redirectPath = oidcTenantConfig.authentication.redirectPath.orElse(null);
+        if (redirectPath == null || !path.equals(redirectPath)) {
+            return Uni.createFrom().optional(Optional.empty());
+        }
+
         final String code = context.request().getParam("code");
         if (code == null) {
             String contentType = context.request().getHeader("Content-Type");
