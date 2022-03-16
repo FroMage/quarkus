@@ -24,7 +24,7 @@ public class WebAuthnRunTimeConfig {
     /**
      * The origin of the application. The origin is basically protocol, host and port.
      *
-     * If your are calling WebAuthn API while your use is located at {@code https://example.com/login},
+     * If your are calling WebAuthn API while your application is located at {@code https://example.com/login},
      * then origin will be {@code https://example.com}.
      *
      * If you are calling from {@code http://localhost:2823/test}, then the origin will be
@@ -86,15 +86,15 @@ public class WebAuthnRunTimeConfig {
     public Optional<AuthenticatorAttachment> authenticatorAttachment;
 
     /**
-     * Resident key required. A resident (private) key, is a key that cannot leave your authenticator device, this means
-     * that you cannot reuse the authenticator to log into a second computer.
+     * Resident key required. A resident (private) key, is a key that cannot leave your authenticator device, this
+     * means that you cannot reuse the authenticator to log into a second computer.
      */
     @ConfigItem(defaultValueDocumentation = "false")
     public Optional<Boolean> requireResidentKey;
 
     /**
-     * User Verification requirements. Webauthn applications may choose {@code REQUIRED} verification to assert that the
-     * user is present during the authentication cerimonies, but in some cases, applications may want to reduce the
+     * User Verification requirements. Webauthn applications may choose {@code REQUIRED} verification to assert that
+     * the user is present during the authentication ceremonies, but in some cases, applications may want to reduce the
      * interactions with the user, i.e.: prevent the use of pop-ups. Valid values are:
      *
      * <ul>
@@ -107,9 +107,9 @@ public class WebAuthnRunTimeConfig {
     public Optional<UserVerification> userVerification;
 
     /**
-     * Non negative User Verification timeout. Authentication must occur within the timeout, this will prevent the user browser to be
-     * blocked with a pop-up required user verification, and the whole cerimony must be completed within the timeout
-     * period. After the timeout, any previously issued challenge is automatically invalidated.
+     * Non negative User Verification timeout. Authentication must occur within the timeout, this will prevent the user
+     * browser from being blocked with a pop-up required user verification, and the whole ceremony must be completed
+     * within the timeout period. After the timeout, any previously issued challenge is automatically invalidated.
      */
     @ConfigItem(defaultValueDocumentation = "60s")
     public Optional<Duration> timeout;
@@ -119,15 +119,17 @@ public class WebAuthnRunTimeConfig {
      * cryptographic verification of the authenticator hardware.
      *
      * Attestation implies that the privacy of the users may be exposed and browsers might override the desired
-     * configuration on user behalf.
+     * configuration on the user's behalf.
      *
      * Valid values are:
      *
      * <ul>
      *     <li>{@code NONE} - no attestation data is sent with registration</li>
-     *     <li>{@code INDIRECT} - attestation data is sent with registration, yelding annomymized data by a trusted CA</li>
+     *     <li>{@code INDIRECT} - attestation data is sent with registration, yelding annomymized data by a trusted
+     *          CA</li>
      *     <li>{@code DIRECT} - attestation data is sent with registration</li>
-     *     <li>{@code ENTERPRISE} - no attestation data is sent with registration. The device AAGUID is returned unaltered.</li>
+     *     <li>{@code ENTERPRISE} - no attestation data is sent with registration. The device AAGUID is returned
+     *          unaltered.</li>
      * </ul>
      */
     @ConfigItem(defaultValueDocumentation = "NONE")
@@ -146,7 +148,8 @@ public class WebAuthnRunTimeConfig {
     public Optional<List<PublicKeyCredential>> pubKeyCredParams;
 
     /**
-     * Length of the challenges exchanged between the application and the browser. Challenges must be at least 32 bytes.
+     * Length of the challenges exchanged between the application and the browser.
+     * Challenges must be at least 32 bytes.
      */
     @ConfigItem(defaultValueDocumentation = "64")
     public OptionalInt challengeLength;
@@ -221,8 +224,8 @@ public class WebAuthnRunTimeConfig {
      * is when the cookie is 9m old then the actual timeout will happen 21m after the last request, as the timeout
      * is only refreshed when a new cookie is generated.
      *
-     * In other words no timeout is tracked on the server side; the timestamp is encoded and encrypted in the cookie itself
-     * and it is decrypted and parsed with each request.
+     * In other words no timeout is tracked on the server side; the timestamp is encoded and encrypted in the cookie
+     * itself and it is decrypted and parsed with each request.
      */
     @ConfigItem(defaultValue = "PT1M")
     public Duration newCookieInterval;
