@@ -299,105 +299,163 @@ public class QuteProcessor {
             }
             ClassInfo classInfo = annotation.target().asClass();
             NativeCheckedTemplateEnhancer enhancer = new NativeCheckedTemplateEnhancer();
+            TemplateMethodCollector nativeMethodCollector = new TemplateMethodCollector() {
+                @Override
+                public void collectTemplateMethod(MethodInfo methodInfo, ClassInfo classInfo, String templatePath,
+                        String fragmentId,
+                        List<String> parameterNames, CheckedTemplateAdapter adaptor) {
+                    enhancer.implement(methodInfo, templatePath, fragmentId, parameterNames, adaptor);
+                }
+            };
             for (MethodInfo methodInfo : classInfo.methods()) {
                 // only keep native static methods
                 if (!Modifier.isStatic(methodInfo.flags())
                         || !Modifier.isNative(methodInfo.flags())) {
                     continue;
                 }
-                // check its return type
-                if (methodInfo.returnType().kind() != Type.Kind.CLASS) {
-                    throw new TemplateException("Incompatible checked template return type: " + methodInfo.returnType()
-                            + " only " + supportedAdaptors);
-                }
-                DotName returnTypeName = methodInfo.returnType().asClassType().name();
-                CheckedTemplateAdapter adaptor = null;
-                // if it's not the default template instance, try to find an adapter
-                if (!returnTypeName.equals(Names.TEMPLATE_INSTANCE)) {
-                    adaptor = adaptors.get(returnTypeName);
-                    if (adaptor == null)
-                        throw new TemplateException("Incompatible checked template return type: " + methodInfo.returnType()
-                                + " only " + supportedAdaptors);
-                }
-                String fragmentId = getCheckedFragmentId(methodInfo, annotation);
-                StringBuilder templatePathBuilder = new StringBuilder();
-                AnnotationValue basePathValue = annotation.value(CHECKED_TEMPLATE_BASE_PATH);
-                if (basePathValue != null && !basePathValue.asString().equals(CheckedTemplate.DEFAULTED)) {
-                    templatePathBuilder.append(basePathValue.asString());
-                } else if (classInfo.enclosingClass() != null) {
-                    ClassInfo enclosingClass = index.getIndex().getClassByName(classInfo.enclosingClass());
-                    templatePathBuilder.append(enclosingClass.simpleName());
-                }
-                if (templatePathBuilder.length() > 0 && templatePathBuilder.charAt(templatePathBuilder.length() - 1) != '/') {
-                    templatePathBuilder.append('/');
-                }
-                String templatePath = templatePathBuilder
-                        .append(getCheckedTemplateName(methodInfo, annotation, fragmentId != null)).toString();
-                String fullPath = templatePath + (fragmentId != null ? "$" + fragmentId : "");
-                MethodInfo checkedTemplateMethod = checkedTemplateMethods.putIfAbsent(fullPath, methodInfo);
-                if (checkedTemplateMethod != null) {
-                    throw new TemplateException(
-                            String.format(
-                                    "Multiple checked template methods exist for the template path %s:\n\t- %s: %s\n\t- %s: %s",
-                                    fullPath, methodInfo.declaringClass().name(), methodInfo,
-                                    checkedTemplateMethod.declaringClass().name(), checkedTemplateMethod));
-                }
-                if (!filePaths.contains(templatePath)
-                        && isNotLocatedByCustomTemplateLocator(locatorPatternsBuildItem.getLocationPatterns(),
-                                templatePath)) {
-                    List<String> startsWith = new ArrayList<>();
-                    for (String filePath : filePaths.getFilePaths()) {
-                        if (filePath.startsWith(templatePath)
-                                && filePath.charAt(templatePath.length()) == '.') {
-                            startsWith.add(filePath);
-                        }
-                    }
-                    if (startsWith.isEmpty()) {
-                        throw new TemplateException(
-                                "No template matching the path " + templatePath + " could be found for: "
-                                        + classInfo.name() + "." + methodInfo.name());
-                    } else {
-                        throw new TemplateException(
-                                startsWith + " match the path " + templatePath
-                                        + " but the file suffix is not configured via the quarkus.qute.suffixes property");
-                    }
-                }
-
-                Map<String, String> bindings = new HashMap<>();
-                List<Type> parameters = methodInfo.parameterTypes();
-                List<String> parameterNames = new ArrayList<>(parameters.size());
-                for (int i = 0; i < parameters.size(); i++) {
-                    Type type = parameters.get(i);
-                    String name = methodInfo.parameterName(i);
-                    if (name == null) {
-                        throw new TemplateException("Parameter names not recorded for " + classInfo.name()
-                                + ": compile the class with -parameters");
-                    }
-                    bindings.put(name, getCheckedTemplateParameterTypeName(type));
-                    parameterNames.add(name);
-                }
-                AnnotationValue requireTypeSafeExpressions = annotation.value(CHECKED_TEMPLATE_REQUIRE_TYPE_SAFE);
-                ret.add(new CheckedTemplateBuildItem(templatePath, fragmentId, bindings, methodInfo,
-                        requireTypeSafeExpressions != null ? requireTypeSafeExpressions.asBoolean() : true));
-                enhancer.implement(methodInfo, templatePath, fragmentId, parameterNames, adaptor);
+                setupTemplateMethod(methodInfo.returnType(), methodInfo, classInfo, annotation, adaptors, supportedAdaptors,
+                        index, checkedTemplateMethods, filePaths, locatorPatternsBuildItem, ret, nativeMethodCollector,
+                        Names.TEMPLATE_INSTANCE);
             }
             transformers.produce(new BytecodeTransformerBuildItem(classInfo.name().toString(),
                     enhancer));
         }
 
+        TemplateMethodCollector recordCollector = new TemplateMethodCollector() {
+            @Override
+            public void collectTemplateMethod(MethodInfo methodInfo, ClassInfo classInfo, String templatePath,
+                    String fragmentId,
+                    List<String> parameterNames, CheckedTemplateAdapter adaptor) {
+                RecordCheckedTemplateEnhancer enhancer = new RecordCheckedTemplateEnhancer(methodInfo, templatePath,
+                        fragmentId, parameterNames, adaptor);
+                transformers.produce(new BytecodeTransformerBuildItem(classInfo.name().toString(),
+                        enhancer));
+            }
+        };
+        for (ClassInfo classInfo : index.getIndex().getAllKnownImplementors(Names.VIEW)) {
+            // only keep records
+            if (!classInfo.isRecord()) {
+                continue;
+            }
+            List<Type> interfaceTypes = classInfo.interfaceTypes();
+            if (interfaceTypes.size() != 1) {
+                throw new TemplateException("Incompatible checked template super interface types: " + interfaceTypes
+                        + " only a single one supported");
+            }
+
+            // this is optional but supported
+            AnnotationInstance annotation = classInfo.declaredAnnotation(Names.CHECKED_TEMPLATE);
+            MethodInfo methodInfo = classInfo.constructors().get(0);
+            setupTemplateMethod(interfaceTypes.get(0), methodInfo, classInfo, annotation, adaptors, supportedAdaptors,
+                    index, checkedTemplateMethods, filePaths, locatorPatternsBuildItem, ret, recordCollector, Names.VIEW);
+        }
+
         return ret;
+    }
+
+    private static interface TemplateMethodCollector {
+
+        void collectTemplateMethod(MethodInfo methodInfo, ClassInfo classInfo, String templatePath, String fragmentId,
+                List<String> parameterNames,
+                CheckedTemplateAdapter adaptor);
+    }
+
+    private void setupTemplateMethod(Type methodReturnType, MethodInfo methodInfo, ClassInfo classInfo,
+            AnnotationInstance annotation,
+            Map<DotName, CheckedTemplateAdapter> adaptors, String supportedAdaptors,
+            BeanArchiveIndexBuildItem index, Map<String, MethodInfo> checkedTemplateMethods,
+            TemplateFilePathsBuildItem filePaths, CustomTemplateLocatorPatternsBuildItem locatorPatternsBuildItem,
+            List<CheckedTemplateBuildItem> ret, TemplateMethodCollector templateMethodCollector, DotName defaultTemplateType) {
+        // check its return type
+        if (methodReturnType.kind() != Type.Kind.CLASS) {
+            throw new TemplateException("Incompatible checked template return type: " + methodReturnType
+                    + " only " + supportedAdaptors);
+        }
+        DotName returnTypeName = methodReturnType.asClassType().name();
+        CheckedTemplateAdapter adaptor = null;
+        // if it's not the default template instance, try to find an adapter
+        if (!returnTypeName.equals(defaultTemplateType)) {
+            adaptor = adaptors.get(returnTypeName);
+            if (adaptor == null)
+                throw new TemplateException("Incompatible checked template return type: " + methodReturnType
+                        + " only " + supportedAdaptors);
+        }
+        String fragmentId = annotation != null ? getCheckedFragmentId(methodInfo, annotation) : null;
+        StringBuilder templatePathBuilder = new StringBuilder();
+        AnnotationValue basePathValue = annotation != null ? annotation.value(CHECKED_TEMPLATE_BASE_PATH) : null;
+        if (basePathValue != null && !basePathValue.asString().equals(CheckedTemplate.DEFAULTED)) {
+            templatePathBuilder.append(basePathValue.asString());
+        } else if (classInfo.enclosingClass() != null) {
+            ClassInfo enclosingClass = index.getIndex().getClassByName(classInfo.enclosingClass());
+            templatePathBuilder.append(enclosingClass.simpleName());
+        }
+        if (templatePathBuilder.length() > 0 && templatePathBuilder.charAt(templatePathBuilder.length() - 1) != '/') {
+            templatePathBuilder.append('/');
+        }
+        String templatePath = templatePathBuilder
+                .append(getCheckedTemplateName(methodInfo, annotation, fragmentId != null)).toString();
+        String fullPath = templatePath + (fragmentId != null ? "$" + fragmentId : "");
+        MethodInfo checkedTemplateMethod = checkedTemplateMethods.putIfAbsent(fullPath, methodInfo);
+        if (checkedTemplateMethod != null) {
+            throw new TemplateException(
+                    String.format(
+                            "Multiple checked template methods exist for the template path %s:\n\t- %s: %s\n\t- %s: %s",
+                            fullPath, methodInfo.declaringClass().name(), methodInfo,
+                            checkedTemplateMethod.declaringClass().name(), checkedTemplateMethod));
+        }
+        if (!filePaths.contains(templatePath)
+                && isNotLocatedByCustomTemplateLocator(locatorPatternsBuildItem.getLocationPatterns(),
+                        templatePath)) {
+            List<String> startsWith = new ArrayList<>();
+            for (String filePath : filePaths.getFilePaths()) {
+                if (filePath.startsWith(templatePath)
+                        && filePath.charAt(templatePath.length()) == '.') {
+                    startsWith.add(filePath);
+                }
+            }
+            if (startsWith.isEmpty()) {
+                throw new TemplateException(
+                        "No template matching the path " + templatePath + " could be found for: "
+                                + classInfo.name() + "." + methodInfo.name());
+            } else {
+                throw new TemplateException(
+                        startsWith + " match the path " + templatePath
+                                + " but the file suffix is not configured via the quarkus.qute.suffixes property");
+            }
+        }
+
+        Map<String, String> bindings = new HashMap<>();
+        List<Type> parameters = methodInfo.parameterTypes();
+        List<String> parameterNames = new ArrayList<>(parameters.size());
+        for (int i = 0; i < parameters.size(); i++) {
+            Type type = parameters.get(i);
+            String name = methodInfo.parameterName(i);
+            if (name == null) {
+                throw new TemplateException("Parameter names not recorded for " + classInfo.name()
+                        + ": compile the class with -parameters");
+            }
+            bindings.put(name, getCheckedTemplateParameterTypeName(type));
+            parameterNames.add(name);
+        }
+        AnnotationValue requireTypeSafeExpressions = annotation != null ? annotation.value(CHECKED_TEMPLATE_REQUIRE_TYPE_SAFE)
+                : null;
+        ret.add(new CheckedTemplateBuildItem(templatePath, fragmentId, bindings, methodInfo,
+                requireTypeSafeExpressions != null ? requireTypeSafeExpressions.asBoolean() : true));
+        templateMethodCollector.collectTemplateMethod(methodInfo, classInfo, templatePath, fragmentId, parameterNames, adaptor);
     }
 
     private String getCheckedTemplateName(MethodInfo method, AnnotationInstance checkedTemplateAnnotation,
             boolean checkedFragment) {
-        AnnotationValue nameValue = checkedTemplateAnnotation.value(CHECKED_TEMPLATE_DEFAULT_NAME);
+        AnnotationValue nameValue = checkedTemplateAnnotation != null
+                ? checkedTemplateAnnotation.value(CHECKED_TEMPLATE_DEFAULT_NAME)
+                : null;
         String defaultName;
         if (nameValue == null) {
             defaultName = CheckedTemplate.ELEMENT_NAME;
         } else {
             defaultName = nameValue.asString();
         }
-        String methodName = method.name();
+        String methodName = method.isConstructor() ? method.declaringClass().simpleName() : method.name();
         if (checkedFragment) {
             // the name is the part before the last occurence of a dollar sign
             methodName = methodName.substring(0, methodName.lastIndexOf('$'));

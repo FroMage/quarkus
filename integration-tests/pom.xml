@@ -369,6 +369,7 @@
             </activation>
             <modules>
                 <module>java-17</module>
+                <module>java-17-qute</module>
             </modules>
         </profile>
 

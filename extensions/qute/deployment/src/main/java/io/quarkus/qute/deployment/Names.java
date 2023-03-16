@@ -52,6 +52,7 @@ final class Names {
     static final DotName SECTION_HELPER_FACTORY = DotName.createSimple(SectionHelperFactory.class.getName());
     static final DotName VALUE_RESOLVER = DotName.createSimple(ValueResolver.class.getName());
     static final DotName NAMESPACE_RESOLVER = DotName.createSimple(NamespaceResolver.class.getName());
+    static final DotName VIEW = DotName.createSimple(io.quarkus.qute.View.class.getName());
 
     private Names() {
     }
