@@ -10,10 +10,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Transient;
 
+import org.hibernate.annotations.processing.Find;
+import org.hibernate.annotations.processing.HQL;
+import org.hibernate.annotations.processing.SQL;
 import org.hibernate.bytecode.enhance.spi.EnhancerConstants;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
+import org.jboss.jandex.MethodInfo;
 
 import io.quarkus.arc.deployment.staticmethods.InterceptedStaticMethodsTransformersRegisteredBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -31,6 +35,10 @@ public final class PanacheHibernateCommonResourceProcessor {
     private static final DotName DOTNAME_EMBEDDABLE = DotName.createSimple(Embeddable.class.getName());
     private static final DotName DOTNAME_TRANSIENT = DotName.createSimple(Transient.class.getName());
     private static final DotName DOTNAME_KOTLIN_METADATA = DotName.createSimple("kotlin.Metadata");
+
+    static final DotName DOTNAME_FIND = DotName.createSimple(Find.class);
+    static final DotName DOTNAME_HQL = DotName.createSimple(HQL.class);
+    static final DotName DOTNAME_SQL = DotName.createSimple(SQL.class);
 
     // This MUST be a separate step from replaceFieldAccess,
     // to avoid a cycle in build steps:
@@ -178,4 +186,9 @@ public final class PanacheHibernateCommonResourceProcessor {
         return entityModel;
     }
 
+    public static boolean isHibernate63Method(MethodInfo method) {
+        return method.hasDeclaredAnnotation(DOTNAME_FIND)
+                || method.hasDeclaredAnnotation(DOTNAME_HQL)
+                || method.hasDeclaredAnnotation(DOTNAME_SQL);
+    }
 }
