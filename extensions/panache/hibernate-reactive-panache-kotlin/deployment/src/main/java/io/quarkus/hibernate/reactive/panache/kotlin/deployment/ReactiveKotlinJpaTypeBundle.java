@@ -10,6 +10,7 @@ import io.quarkus.hibernate.reactive.panache.kotlin.PanacheRepositoryBase;
 import io.quarkus.hibernate.reactive.panache.kotlin.runtime.KotlinJpaOperations;
 import io.quarkus.panache.common.deployment.ByteCodeType;
 import io.quarkus.panache.common.deployment.TypeBundle;
+import io.smallrye.mutiny.Uni;
 
 public class ReactiveKotlinJpaTypeBundle implements TypeBundle {
 
@@ -53,5 +54,15 @@ public class ReactiveKotlinJpaTypeBundle implements TypeBundle {
     @Override
     public ByteCodeType repositoryBase() {
         return new ByteCodeType(PanacheRepositoryBase.class);
+    }
+
+    @Override
+    public ByteCodeType session() {
+        return new ByteCodeType(Uni.class);
+    }
+
+    @Override
+    public String sessionGetter() {
+        return "getSession";
     }
 }

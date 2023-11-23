@@ -1,5 +1,7 @@
 package io.quarkus.hibernate.orm.panache.deployment;
 
+import jakarta.persistence.EntityManager;
+
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
@@ -41,5 +43,15 @@ public class JavaJpaTypeBundle implements TypeBundle {
     @Override
     public ByteCodeType repositoryBase() {
         return new ByteCodeType(PanacheRepositoryBase.class);
+    }
+
+    @Override
+    public ByteCodeType session() {
+        return new ByteCodeType(EntityManager.class);
+    }
+
+    @Override
+    public String sessionGetter() {
+        return "getEntityManager";
     }
 }

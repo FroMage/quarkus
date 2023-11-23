@@ -8,10 +8,21 @@ import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import io.quarkus.hibernate.reactive.panache.runtime.JpaOperations;
 import io.quarkus.panache.common.deployment.ByteCodeType;
 import io.quarkus.panache.common.deployment.TypeBundle;
+import io.smallrye.mutiny.Uni;
 
 public class ReactiveJavaJpaTypeBundle implements TypeBundle {
 
     public static final TypeBundle BUNDLE = new ReactiveJavaJpaTypeBundle();
+
+    @Override
+    public ByteCodeType session() {
+        return new ByteCodeType(Uni.class);
+    }
+
+    @Override
+    public String sessionGetter() {
+        return "getSession";
+    }
 
     @Override
     public ByteCodeType entity() {

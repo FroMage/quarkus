@@ -56,7 +56,7 @@ public class PanacheJpaRepositoryEnhancer extends PanacheRepositoryEnhancer {
             MethodVisitor superVisitor = super.visitMethod(access, methodName, descriptor, signature, exceptions);
             if (methodIfNative != null) {
                 return new PanacheHibernate63DelegatingMethodVisitor(superVisitor, methodIfNative, descriptor,
-                        daoClassInfo.name().toString('/'), false);
+                        daoClassInfo.name().toString('/'), typeBundle, false);
             }
             return superVisitor;
         }

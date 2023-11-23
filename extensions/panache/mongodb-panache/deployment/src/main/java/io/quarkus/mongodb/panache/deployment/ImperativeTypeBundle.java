@@ -45,4 +45,14 @@ public class ImperativeTypeBundle implements TypeBundle {
     public ByteCodeType updateType() {
         return new ByteCodeType(PanacheUpdate.class);
     }
+
+    @Override
+    public ByteCodeType session() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String sessionGetter() {
+        throw new UnsupportedOperationException();
+    }
 }

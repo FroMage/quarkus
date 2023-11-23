@@ -1,5 +1,7 @@
 package io.quarkus.hibernate.orm.panache.kotlin.deployment;
 
+import jakarta.persistence.EntityManager;
+
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion;
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanionBase;
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntity;
@@ -58,5 +60,15 @@ class KotlinJpaTypeBundle implements TypeBundle {
     @Override
     public ByteCodeType updateType() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ByteCodeType session() {
+        return new ByteCodeType(EntityManager.class);
+    }
+
+    @Override
+    public String sessionGetter() {
+        return "getEntityManager";
     }
 }

@@ -58,4 +58,13 @@ class KotlinReactiveTypeBundle implements TypeBundle {
         return new ByteCodeType(ReactivePanacheUpdate.class);
     }
 
+    @Override
+    public ByteCodeType session() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String sessionGetter() {
+        throw new UnsupportedOperationException();
+    }
 }

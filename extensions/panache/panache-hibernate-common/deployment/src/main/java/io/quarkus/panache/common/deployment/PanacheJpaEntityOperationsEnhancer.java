@@ -62,7 +62,7 @@ public class PanacheJpaEntityOperationsEnhancer extends PanacheEntityEnhancer {
             MethodVisitor superVisitor = super.visitMethod(access, methodName, descriptor, signature, exceptions);
             if (methodIfNative != null) {
                 return new PanacheHibernate63DelegatingMethodVisitor(superVisitor, methodIfNative, descriptor,
-                        entityInfo.name().toString('/'), true);
+                        entityInfo.name().toString('/'), typeBundle, true);
             }
             return superVisitor;
         }

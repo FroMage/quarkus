@@ -44,7 +44,7 @@ public class PanacheRepositoryClassOperationGenerationVisitor extends ClassVisit
     protected Map<String, ByteCodeType> typeArguments = new HashMap<>();
     // set of name + "/" + descriptor
     protected Set<String> userMethods = new HashSet<>();
-    private final TypeBundle typeBundle;
+    protected final TypeBundle typeBundle;
     protected Function<String, org.jboss.jandex.Type> argMapper;
     protected ByteCodeType entityUpperBound;
     private final Map<String, String> erasures = new HashMap<>();

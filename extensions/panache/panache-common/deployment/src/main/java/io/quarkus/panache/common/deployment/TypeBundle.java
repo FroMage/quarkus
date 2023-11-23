@@ -1,6 +1,10 @@
 package io.quarkus.panache.common.deployment;
 
 public interface TypeBundle {
+    ByteCodeType session();
+
+    String sessionGetter();
+
     ByteCodeType entity();
 
     ByteCodeType entityBase();
@@ -23,5 +27,5 @@ public interface TypeBundle {
 
     default ByteCodeType updateType() {
         throw new UnsupportedOperationException("Update types are only supported in MongoDB contexts");
-    };
+    }
 }
