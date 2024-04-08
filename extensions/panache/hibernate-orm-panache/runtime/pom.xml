@@ -68,7 +68,7 @@
                         </annotationProcessorPath>
                     </annotationProcessorPaths>
                     <annotationProcessors>
-                        <annotationProcessor>org.hibernate.jpamodelgen.JPAMetaModelEntityProcessor</annotationProcessor>
+                        <annotationProcessor>org.hibernate.processor.HibernateProcessor</annotationProcessor>
                     </annotationProcessors>
                 </configuration>
             </plugin>
