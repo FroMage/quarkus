@@ -1,19 +1,17 @@
 package io.quarkus.hibernate.panache.managed.reactive;
 
-import java.util.Map;
-import java.util.stream.Stream;
-
 import jakarta.json.bind.annotation.JsonbTransient;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import io.quarkus.hibernate.panache.PanacheEntityMarker;
 import io.quarkus.hibernate.panache.managed.PanacheManagedEntityOperations;
 import io.quarkus.hibernate.panache.runtime.spi.PanacheOperations;
 import io.quarkus.hibernate.panache.runtime.spi.PanacheReactiveOperations;
-import io.quarkus.panache.common.Parameters;
 import io.smallrye.mutiny.Uni;
 
-public interface PanacheManagedReactiveEntity extends PanacheManagedEntityOperations<Uni<Void>, Uni<Boolean>> {
+public interface PanacheManagedReactiveEntity<Entity extends PanacheEntityMarker<Entity>>
+        extends PanacheManagedEntityOperations<Entity, Uni<Entity>, Uni<Boolean>> {
 
     private PanacheReactiveOperations operations() {
         return PanacheOperations.getReactiveManaged();
@@ -28,8 +26,8 @@ public interface PanacheManagedReactiveEntity extends PanacheManagedEntityOperat
      * @see #persist(Object, Object...)
      */
     @Override
-    public default Uni<Void> persist() {
-        return operations().persist(this);
+    public default Uni<Entity> persist() {
+        return operations().persist(this).replaceWith((Entity) this);
     }
 
     /**
@@ -42,8 +40,8 @@ public interface PanacheManagedReactiveEntity extends PanacheManagedEntityOperat
      * @see #persist(Object, Object...)
      */
     @Override
-    public default Uni<Void> persistAndFlush() {
-        return operations().persistAndFlush(this);
+    public default Uni<Entity> persistAndFlush() {
+        return operations().persistAndFlush(this).replaceWith((Entity) this);
     }
 
     /**
@@ -56,8 +54,8 @@ public interface PanacheManagedReactiveEntity extends PanacheManagedEntityOperat
      * @see #deleteAll()
      */
     @Override
-    public default Uni<Void> delete() {
-        return operations().delete(this);
+    public default Uni<Entity> delete() {
+        return operations().delete(this).replaceWith((Entity) this);
     }
 
     /**
