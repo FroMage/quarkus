@@ -24,85 +24,42 @@ public interface PanacheStatelessReactiveRepositoryOperations<Entity, Id>
 
     // Operations
 
-    /**
-     * Returns the {@link Mutiny.StatelessSession} for the <Entity> entity class for extra operations (eg. CriteriaQueries)
-     *
-     * @return the {@link Mutiny.StatelessSession} for the <Entity> entity class
-     */
+    @Override
     default Uni<Mutiny.StatelessSession> getSession() {
-        // FIXME: this is false
         return operations().getStatelessSession(getEntityClass());
     }
 
-    /**
-     * Insert the given entity in the database.
-     *
-     * @param entity the entity to insert.
-     */
+    @Override
     default Uni<Entity> insert(Entity entity) {
         return operations().insert(entity).replaceWith(entity);
     }
 
-    /**
-     * Delete the given entity from the database.
-     *
-     * @param entity the entity to delete.
-     */
+    @Override
     default Uni<Entity> delete(Entity entity) {
         return operations().delete(entity).replaceWith(entity);
     }
 
-    /**
-     * Update the given entity in the database.
-     *
-     * @param entity the entity to update.
-     */
+    @Override
     default Uni<Entity> update(Entity entity) {
         return operations().update(entity).replaceWith(entity);
     }
 
-    /**
-     * Insert or update this entity in the database. An insert will be performed if the entity does not already exist
-     * in the database, otherwise it will be updated. Note that you cannot upsert an entity with a null ID.
-     *
-     * @param entity the entity to insert or update.
-     */
+    @Override
     default Uni<Entity> upsert(Entity entity) {
         return operations().upsert(entity).replaceWith(entity);
     }
 
-    /**
-     * Insert all given entities.
-     *
-     * @param entities the entities to insert
-     * @see #insert(Object)
-     * @see #insert(Stream)
-     * @see #insert(Object,Object...)
-     */
+    @Override
     default Uni<Void> insert(Iterable<Entity> entities) {
         return operations().insert(entities);
     }
 
-    /**
-     * Insert all given entities.
-     *
-     * @param entities the entities to insert
-     * @see #insert(Object)
-     * @see #insert(Iterable)
-     * @see #insert(Object,Object...)
-     */
+    @Override
     default Uni<Void> insert(Stream<Entity> entities) {
         return operations().insert(entities);
     }
 
-    /**
-     * Insert all given entities.
-     *
-     * @param entities the entities to insert
-     * @see #insert(Object)
-     * @see #insert(Stream)
-     * @see #insert(Iterable)
-     */
+    @Override
     default Uni<Void> insert(Entity firstEntity, @SuppressWarnings("unchecked") Entity... entities) {
         return operations().insert(firstEntity, entities);
     }

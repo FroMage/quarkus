@@ -28,9 +28,6 @@ public interface PanacheStatelessRepositoryOperations<Entity, Session, Completio
      * Delete the given entity from the database.
      *
      * @param entity the entity to delete.
-     * @see #delete(String, Object...)
-     * @see #delete(String, Map)
-     * @see #deleteAll()
      * @return the entity passed as parameter
      */
     CompletionEntity delete(Entity entity);

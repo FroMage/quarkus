@@ -16,57 +16,24 @@ public interface PanacheManagedBlockingEntity<Entity extends PanacheEntityMarker
         return PanacheOperations.getBlockingManaged();
     }
 
-    /**
-     * Persist this entity in the database, if not already persisted. This will set your ID field if it is not already set.
-     *
-     * @see #isPersistent()
-     * @see #persist(Iterable)
-     * @see #persist(Stream)
-     * @see #persist(Object, Object...)
-     */
     @Override
     public default Entity persist() {
         operations().persist(this);
         return (Entity) this;
     }
 
-    /**
-     * Persist this entity in the database, if not already persisted. This will set your ID field if it is not already set.
-     * Then flushes all pending changes to the database.
-     *
-     * @see #isPersistent()
-     * @see #persist(Iterable)
-     * @see #persist(Stream)
-     * @see #persist(Object, Object...)
-     */
     @Override
     public default Entity persistAndFlush() {
         operations().persistAndFlush(this);
         return (Entity) this;
     }
 
-    /**
-     * Delete this entity from the database, if it is already persisted.
-     *
-     * @see #isPersistent()
-     * @see #delete(String, Object...)
-     * @see #delete(String, Map)
-     * @see #delete(String, Parameters)
-     * @see #deleteAll()
-     */
     @Override
     public default Entity delete() {
         operations().delete(this);
         return (Entity) this;
     }
 
-    /**
-     * Returns true if this entity is persistent in the database. If yes, all modifications to
-     * its persistent fields will be automatically committed to the database at transaction
-     * commit time.
-     *
-     * @return true if this entity is persistent in the database.
-     */
     @JsonbTransient
     // @JsonIgnore is here to avoid serialization of this property with jackson
     @JsonIgnore

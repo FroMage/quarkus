@@ -44,9 +44,6 @@ public interface PanacheManagedRepositoryOperations<Entity, Session, CompletionE
      * @param entity the entity to delete.
      * @return the entity passed as parameter
      * @see #isPersistent(Object)
-     * @see #delete(String, Object...)
-     * @see #delete(String, Map)
-     * @see #deleteAll()
      */
     CompletionEntity delete(Entity entity);
 

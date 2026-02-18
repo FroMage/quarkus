@@ -13,9 +13,6 @@ public interface PanacheManagedEntityOperations<Entity extends PanacheEntityMark
      *
      * @return this entity
      * @see #isPersistent()
-     * @see #persist(Iterable)
-     * @see #persist(Stream)
-     * @see #persist(Object, Object...)
      */
     public CompletionEntity persist();
 
@@ -25,9 +22,6 @@ public interface PanacheManagedEntityOperations<Entity extends PanacheEntityMark
      *
      * @return this entity
      * @see #isPersistent()
-     * @see #persist(Iterable)
-     * @see #persist(Stream)
-     * @see #persist(Object, Object...)
      */
     public CompletionEntity persistAndFlush();
 
@@ -36,10 +30,6 @@ public interface PanacheManagedEntityOperations<Entity extends PanacheEntityMark
      *
      * @return this entity
      * @see #isPersistent()
-     * @see #delete(String, Object...)
-     * @see #delete(String, Map)
-     * @see #delete(String, Parameters)
-     * @see #deleteAll()
      */
     public CompletionEntity delete();
 
